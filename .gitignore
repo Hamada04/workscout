@@ -1,0 +1,25 @@
+# Large files
+*.zip
+*.rar
+*.7z
+
+# Node backend
+backend/node_modules/
+backend/.env
+backend/npm-debug.log*
+
+# Flutter app
+workscout/.dart_tool/
+workscout/build/
+workscout/.idea/
+workscout/.flutter-plugins
+workscout/.flutter-plugins-dependencies
+workscout/.metadata
+
+# Dart / Flutter generated
+workscout/pubspec.lock
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
