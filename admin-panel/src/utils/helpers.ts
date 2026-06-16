@@ -75,7 +75,12 @@ export function getStatusColor(status: ApplicationStatus): {
   text: string;
   dot: string;
 } {
-  const colors: Record<ApplicationStatus, { bg: string; text: string; dot: string }> = {
+  const colors: Record<string, { bg: string; text: string; dot: string }> = {
+    'pending': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
+    'reviewed': { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500' },
+    'interview': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+    'accepted': { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
+    'rejected': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
     'Submitted': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
     'Under Review': { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500' },
     'Interview': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
@@ -83,7 +88,7 @@ export function getStatusColor(status: ApplicationStatus): {
     'Rejected': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
   };
   
-  return colors[status] || colors['Submitted'];
+  return colors[status] || colors['pending'];
 }
 
 // Boolean to Status

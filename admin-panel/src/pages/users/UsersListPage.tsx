@@ -1,120 +1,79 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit2, Trash2, MoreHorizontal, Ban, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, Edit2, Trash2, Ban, CheckCircle } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
   DataTable, 
   SearchFilterBar, 
-  Badge,
   RoleBadge,
-  ActiveBadge,
   Button,
-  Modal,
   ConfirmDialog,
-  Select,
   Avatar,
-  EmptyState
+  Pagination
 } from '@/components/common';
-import { formatDate, roleToColor, formatRole } from '@/utils/helpers';
+import { formatDate } from '@/utils/helpers';
 import { useAuth } from '@/contexts/AuthContext';
 import { User } from '@/types';
-
-// Mock data
-const mockUsers: User[] = [
-  {
-    _id: '1',
-    name: 'Sarah Johnson',
-    email: 'sarah.j@example.com',
-    role: 'user',
-    location: 'California, USA',
-    profilePic: '',
-    skills: ['UI Design', 'Figma', 'User Research'],
-    languages: ['English', 'Spanish'],
-    education: [],
-    experiences: [],
-    savedJobsIds: ['1', '2'],
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: true,
-  },
-  {
-    _id: '2',
-    name: 'Michael Chen',
-    email: 'michael.c@example.com',
-    role: 'admin',
-    location: 'New York, USA',
-    profilePic: '',
-    skills: ['React', 'TypeScript', 'Node.js'],
-    languages: ['English', 'Mandarin'],
-    education: [],
-    experiences: [],
-    savedJobsIds: [],
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: true,
-  },
-  {
-    _id: '3',
-    name: 'Emma Wilson',
-    email: 'emma.w@example.com',
-    role: 'user',
-    location: 'London, UK',
-    profilePic: '',
-    skills: ['Marketing', 'SEO', 'Content Strategy'],
-    languages: ['English'],
-    education: [],
-    experiences: [],
-    savedJobsIds: ['1'],
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    isActive: false,
-  },
-];
+import { userService } from '@/services/userService';
 
 const roleOptions = [
   { value: '', label: 'All Roles' },
   { value: 'user', label: 'User' },
   { value: 'admin', label: 'Admin' },
-  { value: 'super_admin', label: 'Super Admin' },
-  { value: 'hr_admin', label: 'HR Admin' },
-  { value: 'support_admin', label: 'Support Admin' },
-];
-
-const statusOptions = [
-  { value: '', label: 'All Status' },
-  { value: 'active', label: 'Active' },
-  { value: 'inactive', label: 'Inactive' },
 ];
 
 export default function UsersListPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
   
-  const [users, setUsers] = useState<User[]>(mockUsers);
-  const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
 
-  // Filter users
+  const loadUsers = useCallback(async () => {
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await userService.getAll(token, {
+        page: currentPage,
+        limit: 10,
+        search: searchQuery,
+        role: roleFilter,
+      });
+      
+      setUsers(response.users);
+      setTotalPages(response.pages);
+      setTotal(response.total);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, currentPage, searchQuery, roleFilter]);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
   const filteredUsers = useMemo(() => {
+    if (searchQuery === '' && roleFilter === '') return users;
     return users.filter(user => {
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = 
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-      
       const matchesRole = roleFilter === '' || user.role === roleFilter;
-      const matchesStatus = statusFilter === '' || 
-        (statusFilter === 'active' && user.isActive) ||
-        (statusFilter === 'inactive' && !user.isActive);
-      
-      return matchesSearch && matchesRole && matchesStatus;
+      return matchesSearch && matchesRole;
     });
-  }, [users, searchQuery, roleFilter, statusFilter]);
+  }, [users, searchQuery, roleFilter]);
 
   const columns = [
     {
@@ -153,12 +112,6 @@ export default function UsersListPage() {
       ),
     },
     {
-      key: 'isActive',
-      label: 'Status',
-      sortable: true,
-      render: (user: User) => <ActiveBadge isActive={user.isActive} />,
-    },
-    {
       key: 'actions',
       label: 'Actions',
       render: (user: User) => (
@@ -187,12 +140,12 @@ export default function UsersListPage() {
             onClick={(e) => {
               e.stopPropagation();
               setSelectedUser(user);
-              setShowStatusDialog(true);
+              setShowBlockDialog(true);
             }}
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-            title={user.isActive ? 'Deactivate' : 'Activate'}
+            title={(user as User & { isBlocked?: boolean })?.isBlocked ? 'Unblock' : 'Block'}
           >
-            {user.isActive ? <Ban className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+            {(user as User & { isBlocked?: boolean })?.isBlocked ? <CheckCircle className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
           </button>
           <button
             onClick={(e) => {
@@ -210,28 +163,48 @@ export default function UsersListPage() {
     },
   ];
 
-  const handleDelete = () => {
-    if (selectedUser) {
+  const handleDelete = async () => {
+    if (!token || !selectedUser) return;
+    
+    try {
+      await userService.delete(token, selectedUser._id);
       setUsers(users.filter(u => u._id !== selectedUser._id));
       setShowDeleteDialog(false);
       setSelectedUser(null);
+    } catch (error) {
+      console.error('Failed to delete user:', error);
     }
   };
 
-  const handleToggleStatus = () => {
-    if (selectedUser) {
+  const handleToggleBlock = async () => {
+    if (!token || !selectedUser) return;
+    
+    try {
+      const response = await userService.toggleBlock(token, selectedUser._id);
       setUsers(users.map(u => 
-        u._id === selectedUser._id ? { ...u, isActive: !u.isActive } : u
+        u._id === selectedUser._id ? { ...u, isBlocked: response.user.isBlocked } : u
       ));
-      setShowStatusDialog(false);
+      setShowBlockDialog(false);
       setSelectedUser(null);
+    } catch (error) {
+      console.error('Failed to toggle block:', error);
     }
   };
 
   const handleResetFilters = () => {
     setSearchQuery('');
     setRoleFilter('');
-    setStatusFilter('');
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleRoleChange = (value: string) => {
+    setRoleFilter(value);
+    setCurrentPage(1);
   };
 
   return (
@@ -239,26 +212,20 @@ export default function UsersListPage() {
       <PageHeader
         title="Users"
         subtitle="Manage all registered users and their accounts"
-        showAddButton
-        onAddClick={() => navigate('/users/new')}
-        addButtonText="Add User"
       />
 
-      {/* Filters */}
       <Card>
         <SearchFilterBar
           searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Search by name or email..."
           filters={[
-            { key: 'role', label: 'Role', options: roleOptions, value: roleFilter, onChange: setRoleFilter },
-            { key: 'status', label: 'Status', options: statusOptions, value: statusFilter, onChange: setStatusFilter },
+            { key: 'role', label: 'Role', options: roleOptions, value: roleFilter, onChange: handleRoleChange },
           ]}
           onReset={handleResetFilters}
         />
       </Card>
 
-      {/* Users Table */}
       <Card padding="none">
         <DataTable
           columns={columns}
@@ -268,9 +235,19 @@ export default function UsersListPage() {
           onRowClick={(user) => navigate(`/users/${user._id}`)}
           emptyMessage="No users found matching your criteria"
         />
+        {totalPages > 1 && (
+          <div className="border-t">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={total}
+              itemsPerPage={10}
+            />
+          </div>
+        )}
       </Card>
 
-      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => {
@@ -284,18 +261,17 @@ export default function UsersListPage() {
         variant="danger"
       />
 
-      {/* Status Toggle Confirmation */}
       <ConfirmDialog
-        isOpen={showStatusDialog}
+        isOpen={showBlockDialog}
         onClose={() => {
-          setShowStatusDialog(false);
+          setShowBlockDialog(false);
           setSelectedUser(null);
         }}
-        onConfirm={handleToggleStatus}
-        title={selectedUser?.isActive ? 'Deactivate User' : 'Activate User'}
-        message={`Are you sure you want to ${selectedUser?.isActive ? 'deactivate' : 'activate'} "${selectedUser?.name}"?`}
-        confirmText={selectedUser?.isActive ? 'Deactivate' : 'Activate'}
-        variant={selectedUser?.isActive ? 'warning' : 'primary'}
+        onConfirm={handleToggleBlock}
+        title={(selectedUser as User & { isBlocked?: boolean })?.isBlocked ? 'Unblock User' : 'Block User'}
+        message={`Are you sure you want to ${(selectedUser as User & { isBlocked?: boolean })?.isBlocked ? 'unblock' : 'block'} "${selectedUser?.name}"?`}
+        confirmText={(selectedUser as User & { isBlocked?: boolean })?.isBlocked ? 'Unblock' : 'Block'}
+        variant={(selectedUser as User & { isBlocked?: boolean })?.isBlocked ? 'primary' : 'warning'}
       />
     </div>
   );

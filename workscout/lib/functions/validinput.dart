@@ -82,3 +82,4 @@ validInput(String val, int min, int max, String type) {
     return "can't be larger than $max";
   }
 }
+//check for username without spaces 

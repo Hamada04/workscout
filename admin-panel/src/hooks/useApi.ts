@@ -1,5 +1,4 @@
-import { useState, useCallback } from 'react';
-import { ApiResponse, PaginatedResponse } from '@/types';
+import { useState, useCallback, useEffect } from 'react';
 
 interface UseApiOptions {
   onSuccess?: (data: unknown) => void;
@@ -45,7 +44,7 @@ export function useApi() {
 export function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
-  useState(() => {
+  useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);

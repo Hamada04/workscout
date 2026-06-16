@@ -24,21 +24,27 @@ export const applicationService = {
     return apiClient.get<ApiResponse<Application>>(`/admin/applications/${id}`, token);
   },
 
-  updateStatus: async (token: string, id: string, status: ApplicationStatus, message?: string) => {
+  updateStatus: async (token: string, id: string, status: ApplicationStatus, notes?: string) => {
     return apiClient.put<ApiResponse<Application>>(`/admin/applications/${id}/status`, 
-      { status, message }, token);
+      { status, notes }, token);
   },
 
-  sendMessage: async (token: string, id: string, message: string) => {
-    return apiClient.post<ApiResponse<Application>>(`/admin/applications/${id}/message`, 
-      { message }, token);
+  delete: async (token: string, id: string) => {
+    return apiClient.delete<ApiResponse<null>>(`/admin/applications/${id}`, token);
   },
 
   getStats: async (token: string) => {
     return apiClient.get<{
       total: number;
-      byStatus: Record<ApplicationStatus, number>;
-      thisWeek: number;
-    }>('/admin/applications/stats', token);
+      pending: number;
+      reviewed: number;
+      interview: number;
+      accepted: number;
+      rejected: number;
+    }>('/admin/applications/stats/count', token);
+  },
+
+  getByJob: async (token: string, jobId: string) => {
+    return apiClient.get<Application[]>(`/admin/applications/job/${jobId}`, token);
   },
 };

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// const Job = require('../models/Job');
-const Job =require('./models/Job');
+const Job = require('../models/Job');
 
 // 1. جلب جميع الوظائف (GET)
 router.get('/all', async (req, res) => {

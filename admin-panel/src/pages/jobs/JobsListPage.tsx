@@ -1,99 +1,37 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit2, Trash2, MoreHorizontal, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Eye, Edit2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
   DataTable, 
   SearchFilterBar, 
-  Button,
   ConfirmDialog,
-  Select,
   Badge,
-  EmptyState
+  Pagination
 } from '@/components/common';
-import { formatDate, timeAgo } from '@/utils/helpers';
+import { timeAgo } from '@/utils/helpers';
 import { Job } from '@/types';
-import { JOB_CATEGORIES, JOB_TYPES, EXPERIENCE_LEVELS } from '@/utils/constants';
-
-// Mock data
-const mockJobs: Job[] = [
-  {
-    _id: '1',
-    companyName: 'Netflix',
-    jobTitle: 'Senior UI Designer',
-    location: 'California, USA',
-    jobType: 'Fulltime',
-    contractType: 'Permanent',
-    experienceLevel: 'Senior',
-    postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    salary: '$ 15,000',
-    companyLogo: '',
-    category: 'Design',
-    description: 'Join Netflix design team...',
-    officeAddress: 'Los Gatos, California',
-    skills: ['UI Design', 'UX Design', 'Figma'],
-    responsibilities: ['Lead design projects'],
-    requirements: ['5+ years experience'],
-    benefits: ['Health insurance', 'Stock options'],
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '2',
-    companyName: 'Telegram',
-    jobTitle: 'Flutter Developer',
-    location: 'Dubai, UAE',
-    jobType: 'Remote',
-    contractType: 'Contract',
-    experienceLevel: 'Mid',
-    postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    salary: '$ 12,000',
-    companyLogo: '',
-    category: 'Technology',
-    description: 'Build mobile apps...',
-    officeAddress: 'Dubai, UAE',
-    skills: ['Flutter', 'Dart', 'Firebase'],
-    responsibilities: ['Develop mobile apps'],
-    requirements: ['3+ years experience'],
-    benefits: ['Remote work'],
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '3',
-    companyName: 'Startup Inc',
-    jobTitle: 'Digital Marketing Specialist',
-    location: 'Remote',
-    jobType: 'Parttime',
-    contractType: 'Contract',
-    experienceLevel: 'Junior',
-    postedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    salary: '$ 5,000',
-    companyLogo: '',
-    category: 'Marketing',
-    description: 'Marketing role...',
-    officeAddress: 'Remote',
-    skills: ['SEO', 'Social Media'],
-    responsibilities: ['Manage campaigns'],
-    requirements: ['1+ years experience'],
-    benefits: ['Flexible hours'],
-    isActive: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+import { useAuth } from '@/contexts/AuthContext';
+import { jobService } from '@/services/jobService';
 
 const categoryOptions = [
   { value: '', label: 'All Categories' },
-  ...JOB_CATEGORIES.map(c => ({ value: c, label: c })),
+  { value: 'Technology', label: 'Technology' },
+  { value: 'Design', label: 'Design' },
+  { value: 'Marketing', label: 'Marketing' },
+  { value: 'Sales', label: 'Sales' },
+  { value: 'Healthcare', label: 'Healthcare' },
+  { value: 'Education', label: 'Education' },
+  { value: 'Finance', label: 'Finance' },
 ];
 
 const jobTypeOptions = [
   { value: '', label: 'All Types' },
-  ...JOB_TYPES.map(t => ({ value: t, label: t })),
+  { value: 'Full-time', label: 'Full-time' },
+  { value: 'Part-time', label: 'Part-time' },
+  { value: 'Remote', label: 'Remote' },
+  { value: 'Contract', label: 'Contract' },
 ];
 
 const statusOptions = [
@@ -104,31 +42,57 @@ const statusOptions = [
 
 export default function JobsListPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   
-  const [jobs, setJobs] = useState<Job[]>(mockJobs);
-  const [isLoading, setIsLoading] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
+  const loadJobs = useCallback(async () => {
+    if (!token) return;
+    
+    try {
+      setIsLoading(true);
+      const response = await jobService.getAll(token, {
+        page: currentPage,
+        limit: 10,
+        search: searchQuery,
+        category: categoryFilter,
+      });
+      
+      let filteredJobs = response.jobs;
+      if (typeFilter) {
+        filteredJobs = filteredJobs.filter(j => j.jobType === typeFilter);
+      }
+      
+      setJobs(filteredJobs);
+      setTotalPages(response.pages);
+      setTotal(response.total);
+    } catch (error) {
+      console.error('Failed to load jobs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token, currentPage, searchQuery, categoryFilter, typeFilter]);
+
+  useEffect(() => {
+    loadJobs();
+  }, [loadJobs]);
+
   const filteredJobs = useMemo(() => {
-    return jobs.filter(job => {
-      const matchesSearch = searchQuery === '' || 
-        job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.companyName.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = categoryFilter === '' || job.category === categoryFilter;
-      const matchesType = typeFilter === '' || job.jobType === typeFilter;
-      const matchesStatus = statusFilter === '' || 
-        (statusFilter === 'active' && job.isActive) ||
-        (statusFilter === 'inactive' && !job.isActive);
-      
-      return matchesSearch && matchesCategory && matchesType && matchesStatus;
-    });
-  }, [jobs, searchQuery, categoryFilter, typeFilter, statusFilter]);
+    if (statusFilter === '') return jobs;
+    return jobs.filter(job => 
+      statusFilter === 'active' || statusFilter === 'inactive'
+    );
+  }, [jobs, statusFilter]);
 
   const columns = [
     {
@@ -180,18 +144,6 @@ export default function JobsListPage() {
       render: (job: Job) => <span className="text-gray-500 text-sm">{timeAgo(job.postedDate)}</span>,
     },
     {
-      key: 'isActive',
-      label: 'Status',
-      sortable: true,
-      render: (job: Job) => (
-        <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${
-          job.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
-        }`}>
-          {job.isActive ? 'Active' : 'Inactive'}
-        </span>
-      ),
-    },
-    {
       key: 'actions',
       label: 'Actions',
       render: (job: Job) => (
@@ -213,16 +165,6 @@ export default function JobsListPage() {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setJobs(jobs.map(j => j._id === job._id ? { ...j, isActive: !j.isActive } : j));
-            }}
-            className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-            title={job.isActive ? 'Deactivate' : 'Activate'}
-          >
-            {job.isActive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
               setSelectedJob(job);
               setShowDeleteDialog(true);
             }}
@@ -236,11 +178,16 @@ export default function JobsListPage() {
     },
   ];
 
-  const handleDelete = () => {
-    if (selectedJob) {
+  const handleDelete = async () => {
+    if (!token || !selectedJob) return;
+    
+    try {
+      await jobService.delete(token, selectedJob._id);
       setJobs(jobs.filter(j => j._id !== selectedJob._id));
       setShowDeleteDialog(false);
       setSelectedJob(null);
+    } catch (error) {
+      console.error('Failed to delete job:', error);
     }
   };
 
@@ -249,6 +196,12 @@ export default function JobsListPage() {
     setCategoryFilter('');
     setTypeFilter('');
     setStatusFilter('');
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
   };
 
   return (
@@ -264,12 +217,11 @@ export default function JobsListPage() {
       <Card>
         <SearchFilterBar
           searchValue={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={handleSearchChange}
           searchPlaceholder="Search jobs by title or company..."
           filters={[
-            { key: 'category', label: 'Category', options: categoryOptions, value: categoryFilter, onChange: setCategoryFilter },
-            { key: 'type', label: 'Type', options: jobTypeOptions, value: typeFilter, onChange: setTypeFilter },
-            { key: 'status', label: 'Status', options: statusOptions, value: statusFilter, onChange: setStatusFilter },
+            { key: 'category', label: 'Category', options: categoryOptions, value: categoryFilter, onChange: (v) => { setCategoryFilter(v); setCurrentPage(1); } },
+            { key: 'type', label: 'Type', options: jobTypeOptions, value: typeFilter, onChange: (v) => { setTypeFilter(v); setCurrentPage(1); } },
           ]}
           onReset={handleResetFilters}
         />
@@ -284,6 +236,17 @@ export default function JobsListPage() {
           onRowClick={(job) => navigate(`/jobs/${job._id}`)}
           emptyMessage="No jobs found matching your criteria"
         />
+        {totalPages > 1 && (
+          <div className="border-t">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={total}
+              itemsPerPage={10}
+            />
+          </div>
+        )}
       </Card>
 
       <ConfirmDialog

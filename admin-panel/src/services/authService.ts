@@ -3,14 +3,15 @@ import { apiClient } from './api';
 
 export const authService = {
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>('/auth/login', credentials);
+    return apiClient.post<AuthResponse>('/admin/auth/login', credentials);
   },
 
   logout: async (): Promise<void> => {
-    // Implement logout API call if needed
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
   },
 
   getProfile: async (token: string) => {
-    return apiClient.get<ApiResponse<AuthResponse>>('/auth/me', token);
+    return apiClient.get<ApiResponse<AuthResponse>>('/admin/auth/me', token);
   },
 };

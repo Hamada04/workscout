@@ -16,3 +16,7 @@ export {
   SearchSelect, 
   FormActions 
 } from './FormFields';
+export { Pagination } from './Pagination';
+export { SectionHeader } from './SectionHeader';
+export { Tabs } from './Tabs';
+export { PageHeader } from '../layout/PageHeader';

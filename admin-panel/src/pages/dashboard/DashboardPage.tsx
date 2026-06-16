@@ -5,145 +5,69 @@ import {
   Briefcase, 
   FileText, 
   TrendingUp, 
-  TrendingDown,
   Eye,
   ArrowRight,
   Clock
 } from 'lucide-react';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, StatCard, DataTable, StatusBadge, Button } from '@/components/common';
-import { formatDate, timeAgo } from '@/utils/helpers';
+import { timeAgo } from '@/utils/helpers';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Mock data for demonstration
-const mockStats = {
-  totalUsers: 1250,
-  totalJobs: 342,
-  totalApplications: 2156,
-  pendingApplications: 47,
-  newUsersThisWeek: 23,
-  newJobsThisWeek: 12,
-  applicationsTrend: 15,
-  jobsTrend: 8,
-};
-
-const recentApplications = [
-  { 
-    _id: '1', 
-    user: { name: 'Sarah Johnson', email: 'sarah@example.com' },
-    job: { jobTitle: 'Senior UI Designer', companyName: 'Netflix' },
-    status: 'Interview' as const,
-    appliedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  { 
-    _id: '2', 
-    user: { name: 'Michael Chen', email: 'michael@example.com' },
-    job: { jobTitle: 'Flutter Developer', companyName: 'Telegram' },
-    status: 'Submitted' as const,
-    appliedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  { 
-    _id: '3', 
-    user: { name: 'Emma Wilson', email: 'emma@example.com' },
-    job: { jobTitle: 'Product Manager', companyName: 'Invision' },
-    status: 'Under Review' as const,
-    appliedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const recentJobs = [
-  {
-    _id: '1',
-    jobTitle: 'Senior UI Designer',
-    companyName: 'Netflix',
-    location: 'California, USA',
-    postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: true,
-  },
-  {
-    _id: '2',
-    jobTitle: 'Flutter Developer',
-    companyName: 'Telegram',
-    location: 'Dubai, UAE',
-    postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: true,
-  },
-  {
-    _id: '3',
-    jobTitle: 'Digital Marketing Specialist',
-    companyName: 'Startup Inc',
-    location: 'Remote',
-    postedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    isActive: false,
-  },
-];
-
-const applicationColumns = [
-  { 
-    key: 'user', 
-    label: 'Applicant',
-    render: (item: typeof recentApplications[0]) => (
-      <div>
-        <p className="font-medium text-gray-900">{item.user.name}</p>
-        <p className="text-xs text-gray-500">{item.user.email}</p>
-      </div>
-    )
-  },
-  { 
-    key: 'job', 
-    label: 'Job',
-    render: (item: typeof recentApplications[0]) => (
-      <div>
-        <p className="font-medium text-gray-900">{item.job.jobTitle}</p>
-        <p className="text-xs text-gray-500">{item.job.companyName}</p>
-      </div>
-    )
-  },
-  { 
-    key: 'status', 
-    label: 'Status',
-    render: (item: typeof recentApplications[0]) => <StatusBadge status={item.status} />
-  },
-  { 
-    key: 'appliedDate', 
-    label: 'Applied',
-    render: (item: typeof recentApplications[0]) => (
-      <span className="text-gray-500 text-sm">{timeAgo(item.appliedDate)}</span>
-    )
-  },
-];
-
-const jobColumns = [
-  { key: 'jobTitle', label: 'Job Title', sortable: true },
-  { key: 'companyName', label: 'Company', sortable: true },
-  { key: 'location', label: 'Location' },
-  { 
-    key: 'postedDate', 
-    label: 'Posted',
-    render: (item: typeof recentJobs[0]) => (
-      <span className="text-gray-500 text-sm">{timeAgo(item.postedDate)}</span>
-    )
-  },
-  { 
-    key: 'isActive', 
-    label: 'Status',
-    render: (item: typeof recentJobs[0]) => (
-      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${item.isActive ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-        {item.isActive ? 'Active' : 'Inactive'}
-      </span>
-    )
-  },
-];
+import { userService } from '@/services/userService';
+import { jobService } from '@/services/jobService';
+import { applicationService } from '@/services/applicationService';
+import { Application, Job } from '@/types';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalJobs: 0,
+    totalApplications: 0,
+    pendingApplications: 0,
+  });
+  const [recentApplications, setRecentApplications] = useState<Application[]>([]);
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
 
   useEffect(() => {
-    // Simulate data loading
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (token) {
+      loadDashboardData();
+    }
+  }, [token]);
+
+  const loadDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      
+      const [userStats, jobStats, appStats, appsData, jobsData] = await Promise.all([
+        userService.getStats(token!).catch(() => ({ totalUsers: 0, totalAdmins: 0 })),
+        jobService.getStats(token!).catch(() => ({ total: 0 })),
+        applicationService.getStats(token!).catch(() => ({ 
+          total: 0, 
+          pending: 0,
+          reviewed: 0,
+          interview: 0,
+          accepted: 0,
+          rejected: 0 
+        })),
+        applicationService.getAll(token!, { page: 1, limit: 5 }).catch(() => ({ applications: [], total: 0 })),
+        jobService.getAll(token!, { page: 1, limit: 5 }).catch(() => ({ jobs: [], total: 0 })),
+      ]);
+
+      setStats({
+        totalUsers: userStats.totalUsers,
+        totalJobs: jobStats.total,
+        totalApplications: appStats.total,
+        pendingApplications: appStats.pending,
+      });
+      setRecentApplications(appsData.applications || []);
+      setRecentJobs(jobsData.jobs || []);
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -152,9 +76,56 @@ export default function DashboardPage() {
     return 'Good evening';
   };
 
+  const applicationColumns = [
+    { 
+      key: 'user', 
+      label: 'Applicant',
+      render: (item: Application) => (
+        <div>
+          <p className="font-medium text-gray-900">{(item.userId as unknown as { name: string })?.name || 'Unknown'}</p>
+          <p className="text-xs text-gray-500">{(item.userId as unknown as { email: string })?.email || ''}</p>
+        </div>
+      )
+    },
+    { 
+      key: 'job', 
+      label: 'Job',
+      render: (item: Application) => (
+        <div>
+          <p className="font-medium text-gray-900">{(item.jobId as unknown as { jobTitle: string })?.jobTitle || 'Unknown'}</p>
+          <p className="text-xs text-gray-500">{(item.jobId as unknown as { companyName: string })?.companyName || ''}</p>
+        </div>
+      )
+    },
+    { 
+      key: 'status', 
+      label: 'Status',
+      render: (item: Application) => <StatusBadge status={item.status} />
+    },
+    { 
+      key: 'appliedAt', 
+      label: 'Applied',
+      render: (item: Application) => (
+        <span className="text-gray-500 text-sm">{timeAgo(item.appliedAt)}</span>
+      )
+    },
+  ];
+
+  const jobColumns = [
+    { key: 'jobTitle', label: 'Job Title', sortable: true },
+    { key: 'companyName', label: 'Company', sortable: true },
+    { key: 'location', label: 'Location' },
+    { 
+      key: 'postedDate', 
+      label: 'Posted',
+      render: (item: Job) => (
+        <span className="text-gray-500 text-sm">{timeAgo(item.postedDate)}</span>
+      )
+    },
+  ];
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -173,40 +144,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Users"
-          value={mockStats.totalUsers.toLocaleString()}
+          value={stats.totalUsers.toLocaleString()}
           icon={<Users className="w-6 h-6" />}
-          trend={{ value: mockStats.newUsersThisWeek, isPositive: true }}
           color="primary"
         />
         <StatCard
           title="Active Jobs"
-          value={mockStats.totalJobs.toLocaleString()}
+          value={stats.totalJobs.toLocaleString()}
           icon={<Briefcase className="w-6 h-6" />}
-          trend={{ value: mockStats.newJobsThisWeek, isPositive: true }}
           color="success"
         />
         <StatCard
           title="Total Applications"
-          value={mockStats.totalApplications.toLocaleString()}
+          value={stats.totalApplications.toLocaleString()}
           icon={<FileText className="w-6 h-6" />}
-          trend={{ value: mockStats.applicationsTrend, isPositive: true }}
           color="purple"
         />
         <StatCard
           title="Pending Review"
-          value={mockStats.pendingApplications.toLocaleString()}
+          value={stats.pendingApplications.toLocaleString()}
           icon={<Eye className="w-6 h-6" />}
           color="warning"
         />
       </div>
 
-      {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Applications */}
         <Card>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -229,7 +194,6 @@ export default function DashboardPage() {
           />
         </Card>
 
-        {/* Recent Jobs */}
         <Card>
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -253,7 +217,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
       <Card>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -281,7 +244,7 @@ export default function DashboardPage() {
                 <FileText className="w-5 h-5" />
               </div>
               <p className="font-medium text-gray-900">Review Applications</p>
-              <p className="text-sm text-gray-500 mt-0.5">{mockStats.pendingApplications} pending</p>
+              <p className="text-sm text-gray-500 mt-0.5">{stats.pendingApplications} pending</p>
             </div>
           </Link>
           <Link to="/offers/new">

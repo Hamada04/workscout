@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('admin_token', response.token);
         localStorage.setItem('admin_user', JSON.stringify(response.user));
       } else {
-        throw new Error(response.message || 'Login failed');
+        throw new Error('Login failed');
       }
     } catch (error) {
       throw error;

@@ -7,25 +7,23 @@ export const jobService = {
     limit?: number; 
     search?: string;
     category?: string;
-    isActive?: boolean;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.search) queryParams.append('search', params.search);
     if (params?.category) queryParams.append('category', params.category);
-    if (params?.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
     
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return apiClient.get<PaginatedResponse<Job>>(`/admin/jobs${query}`, token);
+    return apiClient.get<PaginatedResponse<Job>>(`/admin/jobs/admin${query}`, token);
   },
 
   getById: async (token: string, id: string) => {
-    return apiClient.get<ApiResponse<Job>>(`/admin/jobs/${id}`, token);
+    return apiClient.get<ApiResponse<Job>>(`/jobs/${id}`, token);
   },
 
   create: async (token: string, data: JobFormData) => {
-    return apiClient.post<ApiResponse<Job>>('/admin/jobs', data, token);
+    return apiClient.post<ApiResponse<Job>>('/admin/jobs/add', data, token);
   },
 
   update: async (token: string, id: string, data: Partial<JobFormData>) => {
@@ -36,20 +34,11 @@ export const jobService = {
     return apiClient.delete<ApiResponse<null>>(`/admin/jobs/${id}`, token);
   },
 
-  toggleStatus: async (token: string, id: string, isActive: boolean) => {
-    return apiClient.put<ApiResponse<Job>>(`/admin/jobs/${id}/status`, { isActive }, token);
-  },
-
-  getCategories: async (token: string) => {
-    return apiClient.get<string[]>('/admin/jobs/categories', token);
+  getCategories: async () => {
+    return apiClient.get<string[]>('/jobs/categories/list');
   },
 
   getStats: async (token: string) => {
-    return apiClient.get<{
-      totalJobs: number;
-      activeJobs: number;
-      newJobsThisWeek: number;
-      jobsByCategory: Record<string, number>;
-    }>('/admin/jobs/stats', token);
+    return apiClient.get<{ total: number }>(`/admin/jobs/stats/count`, token);
   },
 };

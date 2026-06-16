@@ -1,6 +1,5 @@
 import React from 'react';
-import { Settings, Users, Bell, Shield, Database, Palette } from 'lucide-react';
-import { Card, Button, Input, Select, Checkbox, SectionHeader } from '@/components/common';
+import { Card, Button, Input, Select, Checkbox, SectionHeader, PageHeader } from '@/components/common';
 import { APP_NAME, JOB_CATEGORIES } from '@/utils/constants';
 
 const generalSettings = [

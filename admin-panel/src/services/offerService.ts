@@ -6,13 +6,11 @@ export const offerService = {
     page?: number; 
     limit?: number; 
     status?: string;
-    userId?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.status) queryParams.append('status', params.status);
-    if (params?.userId) queryParams.append('userId', params.userId);
     
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
     return apiClient.get<PaginatedResponse<OfferLetter>>(`/admin/offers${query}`, token);
@@ -23,29 +21,37 @@ export const offerService = {
   },
 
   create: async (token: string, data: {
+    userId: string;
+    jobId: string;
     applicationId: string;
-    position: string;
-    startDate: string;
     salary: string;
-    location: string;
-    reportingTo: string;
-    responsibilities: string;
-    benefits: string;
-    termsAndConditions: string;
+    startDate: string;
+    position: string;
+    department?: string;
+    message?: string;
+    expiresInDays?: number;
   }) => {
-    return apiClient.post<ApiResponse<OfferLetter>>('/admin/offers', data, token);
+    return apiClient.post<ApiResponse<OfferLetter>>('/admin/offers/create', data, token);
+  },
+
+  update: async (token: string, id: string, data: Partial<OfferLetter>) => {
+    return apiClient.put<ApiResponse<OfferLetter>>(`/admin/offers/${id}`, data, token);
   },
 
   resend: async (token: string, id: string) => {
-    return apiClient.post<ApiResponse<OfferLetter>>(`/admin/offers/${id}/resend`, {}, token);
+    return apiClient.put<ApiResponse<OfferLetter>>(`/admin/offers/${id}/resend`, {}, token);
+  },
+
+  delete: async (token: string, id: string) => {
+    return apiClient.delete<ApiResponse<null>>(`/admin/offers/${id}`, token);
   },
 
   getStats: async (token: string) => {
     return apiClient.get<{
       total: number;
-      pending: number;
+      sent: number;
       accepted: number;
-      declined: number;
-    }>('/admin/offers/stats', token);
+      rejected: number;
+    }>('/admin/offers/stats/count', token);
   },
 };

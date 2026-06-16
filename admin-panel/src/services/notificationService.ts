@@ -5,47 +5,48 @@ export const notificationService = {
   getAll: async (token: string, params?: { 
     page?: number; 
     limit?: number; 
-    type?: string;
-    userId?: string;
-    isRead?: boolean;
+    isRead?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.type) queryParams.append('type', params.type);
-    if (params?.userId) queryParams.append('userId', params.userId);
-    if (params?.isRead !== undefined) queryParams.append('isRead', params.isRead.toString());
+    if (params?.isRead) queryParams.append('isRead', params.isRead);
     
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
     return apiClient.get<PaginatedResponse<Notification>>(`/admin/notifications${query}`, token);
   },
 
-  create: async (token: string, data: {
+  send: async (token: string, data: {
     userId: string;
-    type: string;
     title: string;
-    description: string;
-    actionLabel?: string;
-    relatedJobId?: string;
-    relatedApplicationId?: string;
+    message: string;
+    type?: string;
+    relatedId?: string;
   }) => {
-    return apiClient.post<ApiResponse<Notification>>('/admin/notifications', data, token);
+    return apiClient.post<ApiResponse<Notification>>('/admin/notifications/send', data, token);
   },
 
-  sendBulk: async (token: string, data: {
-    userIds: string[];
-    type: string;
+  sendAll: async (token: string, data: {
     title: string;
-    description: string;
+    message: string;
+    type?: string;
   }) => {
-    return apiClient.post<ApiResponse<{ sent: number }>>('/admin/notifications/bulk', data, token);
+    return apiClient.post<ApiResponse<{ message: string }>>('/admin/notifications/send-all', data, token);
   },
 
   markAsRead: async (token: string, id: string) => {
     return apiClient.put<ApiResponse<Notification>>(`/admin/notifications/${id}/read`, {}, token);
   },
 
+  markAllRead: async (token: string) => {
+    return apiClient.put<ApiResponse<{ message: string }>>('/admin/notifications/mark-all-read', {}, token);
+  },
+
   delete: async (token: string, id: string) => {
     return apiClient.delete<ApiResponse<null>>(`/admin/notifications/${id}`, token);
+  },
+
+  getStats: async (token: string) => {
+    return apiClient.get<{ total: number; unread: number }>(`/admin/notifications/stats/count`, token);
   },
 };

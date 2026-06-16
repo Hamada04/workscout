@@ -6,6 +6,7 @@ interface CardProps {
   className?: string;
   padding?: 'none' | 'sm' | 'md' | 'lg';
   hover?: boolean;
+  onClick?: () => void;
 }
 
 const paddingStyles = {
@@ -20,15 +21,18 @@ export function Card({
   className,
   padding = 'md',
   hover = false,
+  onClick,
 }: CardProps) {
   return (
     <div
       className={clsx(
         'bg-white rounded-xl border border-gray-200 shadow-sm',
         hover && 'hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer',
+        (hover || onClick) && 'cursor-pointer',
         paddingStyles[padding],
         className
       )}
+      onClick={onClick}
     >
       {children}
     </div>

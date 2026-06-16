@@ -3,23 +3,24 @@ export interface User {
   _id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin' | 'super_admin';
-  location: string;
-  profilePic: string;
-  skills: string[];
-  languages: string[];
-  education: Education[];
-  experiences: Experience[];
-  savedJobsIds: string[];
-  createdAt: string;
-  updatedAt: string;
-  isActive: boolean;
+  role: 'user' | 'admin';
+  location?: string;
+  profilePic?: string;
+  skills?: string[];
+  languages?: string[];
+  education?: Education[];
+  experiences?: Experience[];
+  isActive?: boolean;
+  isBlocked?: boolean;
+  savedJobsIds?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Education {
   degree: string;
   university: string;
-  level: string;
+  level?: string;
   date: string;
 }
 
@@ -27,7 +28,7 @@ export interface Experience {
   title: string;
   company: string;
   date: string;
-  logo: string;
+  logo?: string;
 }
 
 // Job Types
@@ -36,12 +37,12 @@ export interface Job {
   companyName: string;
   jobTitle: string;
   location: string;
-  jobType: 'Remote' | 'Fulltime' | 'Parttime' | 'Contract';
+  jobType: string;
   contractType: string;
-  experienceLevel: 'Entry level' | 'Junior' | 'Senior' | 'Mid';
+  experienceLevel: string;
   postedDate: string;
   salary: string;
-  companyLogo: string;
+  companyLogo?: string;
   category: string;
   description: string;
   officeAddress: string;
@@ -49,74 +50,83 @@ export interface Job {
   responsibilities: string[];
   requirements: string[];
   benefits: string[];
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Application Types
 export interface Application {
   _id: string;
-  userId: string | User;
-  jobId: string | Job;
-  resumeUrl: string;
-  coverLetter: string;
+  userId: string | User | Record<string, unknown>;
+  jobId: string | Job | Record<string, unknown>;
   status: ApplicationStatus;
-  adminMessage: string;
-  appliedDate: string;
-  createdAt: string;
-  updatedAt: string;
+  cvUrl?: string;
+  resumeUrl?: string;
+  coverLetter?: string;
+  adminMessage?: string;
+  notes?: string;
+  appliedAt?: string;
+  appliedDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export type ApplicationStatus = 'Submitted' | 'Under Review' | 'Interview' | 'Accepted' | 'Rejected';
+export type ApplicationStatus = 'pending' | 'reviewed' | 'interview' | 'accepted' | 'rejected' | 'Submitted' | 'Under Review' | 'Interview' | 'Accepted' | 'Rejected';
 
 // Notification Types
 export interface Notification {
   _id: string;
   userId: string | User;
-  type: 'offer' | 'application' | 'system';
   title: string;
-  description: string;
-  actionLabel: string;
-  relatedJobId?: string;
-  relatedApplicationId?: string;
+  message?: string;
+  description?: string;
+  actionLabel?: string;
+  type: 'application' | 'offer' | 'system' | 'job_update';
   isRead: boolean;
-  createdAt: string;
+  relatedId?: string;
+  createdAt?: string;
 }
 
 // Offer Letter Types
 export interface OfferLetter {
   _id: string;
-  applicationId: string | Application;
   userId: string | User;
-  jobId: string | Job;
-  position: string;
-  startDate: string;
+  jobId?: string | Job;
+  applicationId: string | Application;
   salary: string;
-  location: string;
-  reportingTo: string;
-  responsibilities: string;
-  benefits: string;
-  termsAndConditions: string;
-  status: 'pending' | 'accepted' | 'declined';
-  createdAt: string;
+  startDate: string;
+  position: string;
+  department?: string;
+  location?: string;
+  reportingTo?: string;
+  responsibilities?: string;
+  benefits?: string;
+  termsAndConditions?: string;
+  status: 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'pending' | 'declined';
+  message?: string;
+  expiresAt?: string;
   respondedAt?: string;
+  createdAt?: string;
 }
 
 // API Response Types
 export interface ApiResponse<T> {
-  success: boolean;
   data?: T;
+  user?: T;
   message?: string;
-  error?: string;
+  success?: boolean;
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  users?: T[];
+  jobs?: T[];
+  applications?: T[];
+  offers?: T[];
+  notifications?: T[];
   total: number;
   page: number;
-  limit: number;
-  totalPages: number;
+  pages: number;
 }
 
 // Auth Types
@@ -130,6 +140,7 @@ export interface AuthResponse {
   user: User;
 }
 
+// Admin Stats
 export interface AdminStats {
   totalUsers: number;
   totalJobs: number;
@@ -137,9 +148,6 @@ export interface AdminStats {
   pendingApplications: number;
   acceptedApplications: number;
   rejectedApplications: number;
-  newUsersThisWeek: number;
-  newJobsThisWeek: number;
-  newApplicationsThisWeek: number;
 }
 
 // Form Types
@@ -151,7 +159,7 @@ export interface JobFormData {
   contractType: string;
   experienceLevel: string;
   salary: string;
-  companyLogo: string;
+  companyLogo?: string;
   category: string;
   description: string;
   officeAddress: string;
@@ -165,8 +173,8 @@ export interface UserFormData {
   name: string;
   email: string;
   role: string;
-  location: string;
-  profilePic: string;
-  skills: string[];
-  languages: string[];
+  location?: string;
+  profilePic?: string;
+  skills?: string[];
+  languages?: string[];
 }

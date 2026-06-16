@@ -9,6 +9,12 @@ require('dotenv').config();
 
 // استيراد المسارات (Routes)
 const authRoutes = require('./routes/authRoutes');
+const adminAuthRoutes = require('./routes/adminAuthRoutes');
+const userRoutes = require('./routes/userRoutes');
+const jobRoutes = require('./routes/jobRoutes');
+const applicationRoutes = require('./routes/applicationRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
+const offerRoutes = require('./routes/offerRoutes');
 
 const app = express();
 
@@ -21,8 +27,21 @@ app.use((req, res, next) => {
     console.log(`وصل طلب جديد: ${req.method} على المسار ${req.url}`);
     next();
 });
-// ربط مسارات الموثوقية (Login & Signup)
+
+// ربط المسارات
+// User authentication (mobile app)
 app.use('/api/auth', authRoutes);
+
+// Admin authentication & management
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/users', userRoutes);
+app.use('/api/admin/jobs', jobRoutes);
+app.use('/api/admin/applications', applicationRoutes);
+app.use('/api/admin/notifications', notificationRoutes);
+app.use('/api/admin/offers', offerRoutes);
+
+// Public job routes (mobile app)
+app.use('/api/jobs', jobRoutes);
 
 // الاتصال بقاعدة البيانات المحلية
 mongoose.connect(process.env.MONGO_URI)
