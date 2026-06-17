@@ -5,7 +5,7 @@ const offerLetterSchema = new mongoose.Schema({
     jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
     applicationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Application', required: true },
     salary: { type: String, required: true },
-    startDate: { type: String, required: true },
+    startDate: { type: Date, required: true },
     position: { type: String, required: true },
     department: { type: String, default: '' },
     status: { 

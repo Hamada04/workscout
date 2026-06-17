@@ -19,7 +19,9 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:workscout/controller/auth_controller.dart';
 import 'package:workscout/services/auth_service.dart';
+import 'package:workscout/services/token_storage.dart';
 
 abstract class LoginController extends GetxController {
   login();
@@ -31,6 +33,7 @@ class LoginControllerImp extends LoginController {
   late TextEditingController password;
   
   AuthService authService = AuthService();
+  final TokenStorage _tokenStorage = TokenStorage();
 
   @override
   void onInit() {
@@ -52,7 +55,13 @@ class LoginControllerImp extends LoginController {
       var response = await authService.login(email.text, password.text);
 
       if (response['token'] != null) {
-        // إذا نجح الدخول، ننتقل للشاشة الرئيسية للتطبيق
+        await _tokenStorage.saveToken(response['token'] as String);
+
+        if (response['user'] != null) {
+          final authCtrl = Get.find<AuthController>();
+          await authCtrl.setUserFromLogin(response['user'] as Map<String, dynamic>);
+        }
+
         Get.offAllNamed("/MainScreen"); 
       } else {
         Get.defaultDialog(

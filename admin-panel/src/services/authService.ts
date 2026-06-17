@@ -7,8 +7,8 @@ export const authService = {
   },
 
   logout: async (): Promise<void> => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
   },
 
   getProfile: async (token: string) => {

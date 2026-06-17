@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { offerService } from '@/services/offerService';
+import { applicationService } from '@/services/applicationService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -12,53 +15,88 @@ import {
   SectionHeader,
   Badge
 } from '@/components/common';
-import { formatDate } from '@/utils/helpers';
-import { JOB_CATEGORIES } from '@/utils/constants';
-
-// Mock applications for selection
-const mockApplications = [
-  { _id: 'a1', user: { name: 'Sarah Johnson' }, job: { jobTitle: 'Senior UI Designer', companyName: 'Netflix' } },
-  { _id: 'a2', user: { name: 'Michael Chen' }, job: { jobTitle: 'Flutter Developer', companyName: 'Telegram' } },
-];
-
-const applicationOptions = mockApplications.map(a => ({
-  value: a._id,
-  label: `${a.user.name} - ${a.job.jobTitle} at ${a.job.companyName}`,
-}));
+import { Application, User, Job } from '@/types';
 
 export default function OfferFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { token } = useAuth();
   const isEditing = !!id;
-  
+
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoadingApps, setIsLoadingApps] = useState(true);
+
   const [formData, setFormData] = useState({
     applicationId: '',
     position: '',
     startDate: '',
     salary: '',
-    location: '',
-    reportingTo: '',
-    responsibilities: '',
-    benefits: '',
-    termsAndConditions: '',
+    department: '',
+    message: '',
+    expiresInDays: 14,
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleChange = (field: string, value: string) => {
+  useEffect(() => {
+    if (!token) return;
+    setIsLoadingApps(true);
+    applicationService.getAll(token)
+      .then((res) => {
+        const items = (res as unknown as Record<string, unknown>)['applications'] as Application[] ?? [];
+        setApplications(items);
+
+        const preSelectedId = (location.state as Record<string, string>)?.['applicationId'];
+        if (preSelectedId && items.some(a => a._id === preSelectedId)) {
+          setFormData(prev => ({ ...prev, applicationId: preSelectedId }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingApps(false));
+  }, [token, location.state]);
+
+  const applicationOptions = applications.map(a => {
+    const user = a.userId as User;
+    const job = a.jobId as Job;
+    return {
+      value: a._id,
+      label: `${user.name} - ${job.jobTitle} at ${job.companyName}`,
+    };
+  });
+
+  const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!token) return;
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const selectedApp = applications.find(a => a._id === formData.applicationId);
+      const job = selectedApp?.jobId as Job | undefined;
+      const user = selectedApp?.userId as User | undefined;
+
+      await offerService.create(token, {
+        userId: user?._id ?? '',
+        jobId: job?._id ?? '',
+        applicationId: formData.applicationId,
+        salary: formData.salary,
+        startDate: formData.startDate,
+        position: formData.position,
+        department: formData.department,
+        message: formData.message,
+        expiresInDays: formData.expiresInDays,
+      });
       navigate('/offers');
-    }, 1000);
+    } catch {
+      // Handled by interceptor
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/offers">
@@ -78,9 +116,7 @@ export default function OfferFormPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Application Selection */}
           <Card>
             <SectionHeader 
               title="Candidate & Position" 
@@ -92,7 +128,7 @@ export default function OfferFormPage() {
                 value={formData.applicationId}
                 onChange={(e) => handleChange('applicationId', e.target.value)}
                 options={applicationOptions}
-                placeholder="Select an application"
+                placeholder={isLoadingApps ? 'Loading applications...' : 'Select an application'}
               />
               <Input
                 label="Position Title"
@@ -103,7 +139,6 @@ export default function OfferFormPage() {
             </div>
           </Card>
 
-          {/* Compensation */}
           <Card>
             <SectionHeader title="Compensation & Start Date" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -122,42 +157,27 @@ export default function OfferFormPage() {
             </div>
           </Card>
 
-          {/* Details */}
           <Card>
             <SectionHeader title="Offer Details" />
             <div className="space-y-4">
               <Input
-                label="Work Location"
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
-                placeholder="e.g., California, USA or Remote"
-              />
-              <Input
-                label="Reporting To"
-                value={formData.reportingTo}
-                onChange={(e) => handleChange('reportingTo', e.target.value)}
-                placeholder="e.g., Design Director"
+                label="Department"
+                value={formData.department}
+                onChange={(e) => handleChange('department', e.target.value)}
+                placeholder="e.g., Design"
               />
               <Textarea
-                label="Job Responsibilities"
-                value={formData.responsibilities}
-                onChange={(e) => handleChange('responsibilities', e.target.value)}
-                placeholder="Describe key responsibilities..."
+                label="Message"
+                value={formData.message}
+                onChange={(e) => handleChange('message', e.target.value)}
+                placeholder="Personal message to the candidate..."
                 rows={4}
               />
-              <Textarea
-                label="Benefits"
-                value={formData.benefits}
-                onChange={(e) => handleChange('benefits', e.target.value)}
-                placeholder="List employee benefits..."
-                rows={3}
-              />
-              <Textarea
-                label="Terms & Conditions"
-                value={formData.termsAndConditions}
-                onChange={(e) => handleChange('termsAndConditions', e.target.value)}
-                placeholder="Employment terms and conditions..."
-                rows={3}
+              <Input
+                label="Expires In (days)"
+                type="number"
+                value={String(formData.expiresInDays)}
+                onChange={(e) => handleChange('expiresInDays', parseInt(e.target.value) || 14)}
               />
             </div>
           </Card>
@@ -170,9 +190,7 @@ export default function OfferFormPage() {
           />
         </div>
 
-        {/* Sidebar */}
         <div className="space-y-6">
-          {/* Help Card */}
           <Card className="bg-primary-50 border-primary-100">
             <h4 className="font-semibold text-primary-900 mb-2">Creating an Offer Letter</h4>
             <ul className="text-sm text-primary-700 space-y-2">
@@ -182,23 +200,6 @@ export default function OfferFormPage() {
               <li>• Detail responsibilities and benefits</li>
               <li>• Review terms and conditions</li>
             </ul>
-          </Card>
-
-          {/* Preview Card */}
-          <Card>
-            <SectionHeader title="Preview" />
-            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
-              <div className="text-center border-b border-gray-200 pb-4">
-                <h3 className="font-bold text-gray-900">WorkScout</h3>
-                <p className="text-xs text-gray-500">Official Offer Letter</p>
-              </div>
-              <div className="space-y-2 text-sm">
-                <p><span className="text-gray-500">Position:</span> {formData.position || 'Position Title'}</p>
-                <p><span className="text-gray-500">Salary:</span> {formData.salary || '$ 0/month'}</p>
-                <p><span className="text-gray-500">Start Date:</span> {formData.startDate || 'TBD'}</p>
-                <p><span className="text-gray-500">Location:</span> {formData.location || 'TBD'}</p>
-              </div>
-            </div>
           </Card>
         </div>
       </div>

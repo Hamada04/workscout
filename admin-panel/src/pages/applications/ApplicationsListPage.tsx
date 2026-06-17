@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, FileText, Mail, MessageSquare } from 'lucide-react';
+import { Eye, FileText, Mail } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { applicationService } from '@/services/applicationService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -12,83 +14,9 @@ import {
   StatusBadge,
   EmptyState
 } from '@/components/common';
-import { formatDate, timeAgo } from '@/utils/helpers';
-import { Application, ApplicationStatus } from '@/types';
+import { timeAgo } from '@/utils/helpers';
+import { Application, ApplicationStatus, User, Job } from '@/types';
 import { APPLICATION_STATUSES } from '@/utils/constants';
-
-// Mock data
-const mockApplications: (Application & { user: { name: string; email: string }; job: { jobTitle: string; companyName: string } })[] = [
-  {
-    _id: '1',
-    userId: 'u1',
-    jobId: 'j1',
-    user: { name: 'Sarah Johnson', email: 'sarah@example.com' },
-    job: { jobTitle: 'Senior UI Designer', companyName: 'Netflix' },
-    resumeUrl: '/resumes/sarah-johnson.pdf',
-    coverLetter: 'I am excited to apply...',
-    status: 'Interview',
-    adminMessage: '',
-    appliedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '2',
-    userId: 'u2',
-    jobId: 'j2',
-    user: { name: 'Michael Chen', email: 'michael@example.com' },
-    job: { jobTitle: 'Flutter Developer', companyName: 'Telegram' },
-    resumeUrl: '/resumes/michael-chen.pdf',
-    coverLetter: '',
-    status: 'Submitted',
-    adminMessage: '',
-    appliedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '3',
-    userId: 'u3',
-    jobId: 'j3',
-    user: { name: 'Emma Wilson', email: 'emma@example.com' },
-    job: { jobTitle: 'Product Manager', companyName: 'Invision' },
-    resumeUrl: '/resumes/emma-wilson.pdf',
-    coverLetter: 'I have extensive experience...',
-    status: 'Under Review',
-    adminMessage: 'Reviewing application...',
-    appliedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '4',
-    userId: 'u4',
-    jobId: 'j1',
-    user: { name: 'James Brown', email: 'james@example.com' },
-    job: { jobTitle: 'Senior UI Designer', companyName: 'Netflix' },
-    resumeUrl: '/resumes/james-brown.pdf',
-    coverLetter: '',
-    status: 'Accepted',
-    adminMessage: 'Congratulations!',
-    appliedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    _id: '5',
-    userId: 'u5',
-    jobId: 'j2',
-    user: { name: 'Lisa Anderson', email: 'lisa@example.com' },
-    job: { jobTitle: 'Flutter Developer', companyName: 'Telegram' },
-    resumeUrl: '/resumes/lisa-anderson.pdf',
-    coverLetter: 'I would be great for this role...',
-    status: 'Rejected',
-    adminMessage: 'We have decided to move forward with other candidates.',
-    appliedDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
 
 const statusOptions = [
   { value: '', label: 'All Status' },
@@ -97,19 +25,39 @@ const statusOptions = [
 
 export default function ApplicationsListPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   
-  const [applications, setApplications] = useState(mockApplications);
-  const [isLoading, setIsLoading] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
+  useEffect(() => {
+    if (!token) return;
+    setIsLoading(true);
+    applicationService.getAll(token)
+      .then((res) => {
+        const items = (res as unknown as Record<string, unknown>)['applications'] as Application[] ?? [];
+        setApplications(items);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [token]);
+
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
+      const user = app.userId as User;
+      const job = app.jobId as Job;
+      const userName = user?.name ?? '';
+      const userEmail = user?.email ?? '';
+      const jobTitle = job?.jobTitle ?? '';
+      const companyName = job?.companyName ?? '';
+
       const matchesSearch = searchQuery === '' || 
-        app.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.job.companyName.toLowerCase().includes(searchQuery.toLowerCase());
+        userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        userEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        companyName.toLowerCase().includes(searchQuery.toLowerCase());
       
       const matchesStatus = statusFilter === '' || app.status === statusFilter;
       
@@ -122,44 +70,50 @@ export default function ApplicationsListPage() {
       key: 'user',
       label: 'Applicant',
       sortable: true,
-      render: (app: typeof mockApplications[0]) => (
-        <div className="flex items-center gap-3">
-          <Avatar name={app.user.name} size="md" />
-          <div>
-            <p className="font-medium text-gray-900">{app.user.name}</p>
-            <p className="text-sm text-gray-500">{app.user.email}</p>
+      render: (app: Application) => {
+        const user = app.userId as User;
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar name={user.name} size="md" />
+            <div>
+              <p className="font-medium text-gray-900">{user.name}</p>
+              <p className="text-sm text-gray-500">{user.email}</p>
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       key: 'job',
       label: 'Job',
-      render: (app: typeof mockApplications[0]) => (
-        <div>
-          <p className="font-medium text-gray-900">{app.job.jobTitle}</p>
-          <p className="text-sm text-gray-500">{app.job.companyName}</p>
-        </div>
-      ),
+      render: (app: Application) => {
+        const job = app.jobId as Job;
+        return (
+          <div>
+            <p className="font-medium text-gray-900">{job.jobTitle}</p>
+            <p className="text-sm text-gray-500">{job.companyName}</p>
+          </div>
+        );
+      },
     },
     {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (app: typeof mockApplications[0]) => <StatusBadge status={app.status} />,
+      render: (app: Application) => <StatusBadge status={app.status} />,
     },
     {
       key: 'appliedDate',
       label: 'Applied',
       sortable: true,
-      render: (app: typeof mockApplications[0]) => (
-        <span className="text-gray-500 text-sm">{timeAgo(app.appliedDate)}</span>
+      render: (app: Application) => (
+        <span className="text-gray-500 text-sm">{timeAgo(app.appliedAt ?? app.appliedDate ?? '')}</span>
       ),
     },
     {
       key: 'actions',
       label: 'Actions',
-      render: (app: typeof mockApplications[0]) => (
+      render: (app: Application) => (
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); navigate(`/applications/${app._id}`); }}
@@ -187,7 +141,6 @@ export default function ApplicationsListPage() {
     },
   ];
 
-  // Status counts
   const statusCounts = useMemo(() => {
     return APPLICATION_STATUSES.reduce((acc, status) => {
       acc[status] = applications.filter(a => a.status === status).length;
@@ -207,7 +160,6 @@ export default function ApplicationsListPage() {
         subtitle="Manage job applications and track their status"
       />
 
-      {/* Status Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {APPLICATION_STATUSES.map((status) => (
           <Card 

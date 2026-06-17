@@ -52,13 +52,13 @@ export const EXPERIENCE_LEVELS = [
   'Manager',
 ];
 
-// Application Statuses
+// Application Statuses (must match backend schema)
 export const APPLICATION_STATUSES = [
-  'Submitted',
-  'Under Review',
-  'Interview',
-  'Accepted',
-  'Rejected',
+  'pending',
+  'reviewed',
+  'interview',
+  'accepted',
+  'rejected',
 ] as const;
 
 // User Roles

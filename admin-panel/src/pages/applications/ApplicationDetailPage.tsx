@@ -8,11 +8,12 @@ import {
   MessageSquare,
   Send,
   CheckCircle,
-  XCircle,
   Clock,
   Briefcase,
-  User
+  User as UserIcon
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { applicationService } from '@/services/applicationService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -25,94 +26,56 @@ import {
   SectionHeader
 } from '@/components/common';
 import { formatDate, timeAgo } from '@/utils/helpers';
-import { Application, ApplicationStatus } from '@/types';
+import { Application, ApplicationStatus, User, Job } from '@/types';
 import { APPLICATION_STATUSES } from '@/utils/constants';
-
-const mockApplication = {
-  _id: '1',
-  userId: 'u1',
-  jobId: 'j1',
-  resumeUrl: '/resumes/sarah-johnson.pdf',
-  coverLetter: 'Dear Hiring Team,\n\nI am writing to express my strong interest in the Senior UI Designer position at Netflix. With over 5 years of experience in UI/UX design and a passion for creating exceptional user experiences, I believe I would be a valuable addition to your team.\n\nThroughout my career, I have had the opportunity to work on various projects that have honed my skills in user research, wireframing, prototyping, and visual design. I am proficient in Figma, Sketch, and Adobe Creative Suite, and I stay up-to-date with the latest design trends and best practices.\n\nI am particularly drawn to Netflix\'s commitment to delivering high-quality content and seamless user experiences across multiple platforms. Your focus on data-driven design decisions aligns perfectly with my approach to creating intuitive and engaging interfaces.\n\nI would welcome the opportunity to discuss how my skills and experience can contribute to Netflix\'s continued success.\n\nBest regards,\nSarah Johnson',
-  status: 'Interview' as ApplicationStatus,
-  adminMessage: 'We are impressed with your profile and would like to schedule an interview.',
-  appliedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  user: {
-    _id: 'u1',
-    name: 'Sarah Johnson',
-    email: 'sarah@example.com',
-    role: 'user' as const,
-    location: 'California, USA',
-    profilePic: '',
-    skills: ['UI Design', 'Figma', 'User Research', 'Prototyping'],
-    languages: ['English', 'Spanish'],
-    education: [{ degree: 'BSc Computer Science', university: 'Stanford', level: 'Bachelor', date: '2018' }],
-    experiences: [{ title: 'Senior Designer', company: 'Tech Corp', date: '2022-Present', logo: '' }],
-    savedJobsIds: [],
-    createdAt: '',
-    updatedAt: '',
-    isActive: true,
-  },
-  job: {
-    _id: 'j1',
-    companyName: 'Netflix',
-    jobTitle: 'Senior UI Designer',
-    location: 'California, USA',
-    jobType: 'Fulltime',
-    contractType: 'Permanent',
-    experienceLevel: 'Senior',
-    postedDate: '',
-    salary: '$ 15,000',
-    companyLogo: '',
-    category: 'Design',
-    description: '',
-    officeAddress: 'Los Gatos, California',
-    skills: ['UI Design', 'UX Design'],
-    responsibilities: [],
-    requirements: [],
-    benefits: [],
-    isActive: true,
-    createdAt: '',
-    updatedAt: '',
-  },
-};
 
 const statusOptions = APPLICATION_STATUSES.map(s => ({ value: s, label: s }));
 
 export default function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
   
-  const [application, setApplication] = useState<typeof mockApplication | null>(null);
+  const [application, setApplication] = useState<Application | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showMessageModal, setShowMessageModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [message, setMessage] = useState('');
-  const [newStatus, setNewStatus] = useState<ApplicationStatus>('Submitted');
+  const [newStatus, setNewStatus] = useState<ApplicationStatus>('pending');
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setApplication(mockApplication);
-      setNewStatus(mockApplication.status);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [id]);
+    if (!token || !id) return;
+    setIsLoading(true);
+    applicationService.getById(token, id)
+      .then(res => {
+        const app = (res as unknown as Record<string, unknown>)?.['data'] as Application ?? (res as unknown as Application);
+        setApplication(app);
+        setNewStatus(app.status);
+      })
+      .catch(() => setApplication(null))
+      .finally(() => setIsLoading(false));
+  }, [id, token]);
 
-  const handleStatusUpdate = () => {
-    if (application) {
+  const handleStatusUpdate = async () => {
+    if (!token || !id || !application) return;
+    try {
+      await applicationService.updateStatus(token, id, newStatus);
       setApplication({ ...application, status: newStatus });
       setShowStatusModal(false);
+    } catch {
+      // Handled by interceptor
     }
   };
 
-  const handleSendMessage = () => {
-    if (application && message.trim()) {
-      setApplication({ ...application, adminMessage: message });
+  const handleSendMessage = async () => {
+    if (!token || !id || !application || !message.trim()) return;
+    try {
+      await applicationService.updateStatus(token, id, application.status, message);
+      setApplication({ ...application, notes: message });
       setShowMessageModal(false);
       setMessage('');
+    } catch {
+      // Handled by interceptor
     }
   };
 
@@ -137,9 +100,11 @@ export default function ApplicationDetailPage() {
     );
   }
 
+  const applicant = application.userId as User;
+  const job = application.jobId as Job;
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link to="/applications">
@@ -153,7 +118,7 @@ export default function ApplicationDetailPage() {
               <StatusBadge status={application.status} />
             </div>
             <p className="text-gray-500 mt-1">
-              Applied {timeAgo(application.appliedDate)}
+              Applied {timeAgo(application.appliedAt ?? application.appliedDate ?? '')}
             </p>
           </div>
         </div>
@@ -182,34 +147,33 @@ export default function ApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
         <div className="space-y-6">
-          {/* Applicant Card */}
           <Card>
             <SectionHeader title="Applicant" />
             <div className="flex items-center gap-4 mb-4">
-              <Avatar name={application.user.name} size="lg" />
+              <Avatar name={applicant.name} size="lg" />
               <div>
-                <p className="font-semibold text-gray-900">{application.user.name}</p>
-                <p className="text-sm text-gray-500">{application.user.email}</p>
+                <p className="font-semibold text-gray-900">{applicant.name}</p>
+                <p className="text-sm text-gray-500">{applicant.email}</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">{application.user.location}</span>
+                <UserIcon className="w-4 h-4 text-gray-400" />
+                <span className="text-gray-600">{applicant.location}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <Briefcase className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">{application.user.experiences[0]?.title || 'No experience listed'}</span>
+                <span className="text-gray-600">
+                  {applicant.experiences?.[0]?.title || 'No experience listed'}
+                </span>
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-sm font-medium text-gray-700 mb-2">Skills</p>
               <div className="flex flex-wrap gap-1.5">
-                {application.user.skills.map((skill) => (
+                {applicant.skills?.map((skill) => (
                   <span key={skill} className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
                     {skill}
                   </span>
@@ -218,16 +182,15 @@ export default function ApplicationDetailPage() {
             </div>
           </Card>
 
-          {/* Job Card */}
           <Card>
             <SectionHeader title="Applied For" />
             <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="font-semibold text-gray-900">{application.job.jobTitle}</p>
-              <p className="text-sm text-gray-500">{application.job.companyName}</p>
+              <p className="font-semibold text-gray-900">{job.jobTitle}</p>
+              <p className="text-sm text-gray-500">{job.companyName}</p>
               <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                <span>{application.job.location}</span>
+                <span>{job.location}</span>
                 <span>•</span>
-                <span>{application.job.salary}</span>
+                <span>{job.salary}</span>
               </div>
             </div>
             <Button variant="outline" className="w-full mt-4" size="sm">
@@ -235,48 +198,59 @@ export default function ApplicationDetailPage() {
             </Button>
           </Card>
 
-          {/* Resume */}
           <Card>
             <SectionHeader title="Resume" />
-            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <FileText className="w-5 h-5 text-red-500" />
+            {application.cvUrl || application.resumeUrl ? (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-red-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {(application.cvUrl || application.resumeUrl || '').split('/').pop() || 'Resume'}
+                  </p>
+                  <p className="text-xs text-gray-500">PDF</p>
+                </div>
+                <a
+                  href={
+                    (application.cvUrl || application.resumeUrl || '').startsWith('http')
+                      ? (application.cvUrl || application.resumeUrl)
+                      : `http://localhost:3000${application.cvUrl || application.resumeUrl}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="ghost" size="sm">
+                    <Download className="w-4 h-4" />
+                  </Button>
+                </a>
               </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900">Sarah_Johnson_Resume.pdf</p>
-                <p className="text-xs text-gray-500">245 KB • PDF</p>
-              </div>
-              <Button variant="ghost" size="sm">
-                <Download className="w-4 h-4" />
-              </Button>
-            </div>
+            ) : (
+              <p className="text-sm text-gray-400">No resume uploaded</p>
+            )}
           </Card>
         </div>
 
-        {/* Right Column - Cover Letter & Messages */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Cover Letter */}
           <Card>
             <SectionHeader title="Cover Letter" />
             <div className="prose prose-sm max-w-none">
               <p className="text-gray-600 whitespace-pre-line leading-relaxed">
-                {application.coverLetter}
+                {application.coverLetter || 'No cover letter provided'}
               </p>
             </div>
           </Card>
 
-          {/* Admin Message */}
-          {application.adminMessage && (
+          {application.notes && (
             <Card className="bg-primary-50 border-primary-100">
               <SectionHeader title="Your Message to Applicant" />
-              <p className="text-gray-700">{application.adminMessage}</p>
+              <p className="text-gray-700">{application.notes}</p>
               <p className="text-xs text-gray-400 mt-2">
-                Sent {formatDate(application.updatedAt)}
+                Sent {formatDate(application.updatedAt ?? '')}
               </p>
             </Card>
           )}
 
-          {/* Timeline / Activity */}
           <Card>
             <SectionHeader title="Application Timeline" />
             <div className="space-y-4">
@@ -286,10 +260,10 @@ export default function ApplicationDetailPage() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Application Submitted</p>
-                  <p className="text-sm text-gray-500">{formatDate(application.appliedDate, 'long')}</p>
+                  <p className="text-sm text-gray-500">{formatDate(application.appliedAt ?? application.appliedDate ?? '', 'long')}</p>
                 </div>
               </div>
-              {application.status !== 'Submitted' && (
+              {application.status !== 'pending' && (
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
                     <Clock className="w-4 h-4 text-yellow-600" />
@@ -300,10 +274,10 @@ export default function ApplicationDetailPage() {
                   </div>
                 </div>
               )}
-              {(application.status === 'Interview' || application.status === 'Accepted') && (
+              {(application.status === 'interview' || application.status === 'accepted') && (
                 <div className="flex gap-4">
                   <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-purple-600" />
+                    <UserIcon className="w-4 h-4 text-purple-600" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Interview Scheduled</p>
@@ -316,7 +290,6 @@ export default function ApplicationDetailPage() {
         </div>
       </div>
 
-      {/* Status Update Modal */}
       <Modal
         isOpen={showStatusModal}
         onClose={() => setShowStatusModal(false)}
@@ -336,7 +309,6 @@ export default function ApplicationDetailPage() {
         />
       </Modal>
 
-      {/* Message Modal */}
       <Modal
         isOpen={showMessageModal}
         onClose={() => setShowMessageModal(false)}

@@ -51,9 +51,9 @@ export function DataTable<T extends Record<string, any>>({
   } | null>(null);
 
   const sortedData = useMemo(() => {
-    if (!sortConfig) return data;
+    if (!sortConfig) return data ?? [];
     
-    return [...data].sort((a, b) => {
+    return [...(data ?? [])].sort((a, b) => {
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
       
@@ -156,7 +156,7 @@ export function DataTable<T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sortedData.length === 0 ? (
+            {(sortedData ?? []).length === 0 ? (
               <tr>
                 <td 
                   colSpan={columns.length + (selectable ? 1 : 0)} 

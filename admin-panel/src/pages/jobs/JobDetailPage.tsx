@@ -21,73 +21,46 @@ import {
   SectionHeader
 } from '@/components/common';
 import { formatDate, timeAgo } from '@/utils/helpers';
-import { Job } from '@/types';
-
-const mockJob: Job = {
-  _id: '1',
-  companyName: 'Netflix',
-  jobTitle: 'Senior UI Designer',
-  location: 'California, USA',
-  jobType: 'Fulltime',
-  contractType: 'Permanent',
-  experienceLevel: 'Senior',
-  postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  salary: '$ 15,000',
-  companyLogo: '',
-  category: 'Design',
-  description: 'Join Netflix design team to create world-class user interfaces for our streaming platform. You will work closely with product managers, engineers, and other designers to deliver exceptional user experiences.',
-  officeAddress: 'Los Gatos, California, United States',
-  skills: ['UI Design', 'UX Design', 'Figma', 'Sketch', 'Prototyping', 'User Research'],
-  responsibilities: [
-    'Design user interfaces that are visually appealing and user-friendly',
-    'Collaborate with cross-functional teams to define and implement innovative solutions',
-    'Create wireframes, storyboards, user flows, process flows and site maps',
-    'Present design concepts and prototypes to stakeholders',
-    'Mentor junior designers and provide constructive feedback',
-  ],
-  requirements: [
-    'Proven UI design experience with a strong portfolio',
-    'Proficiency in design and prototyping tools like Figma, Sketch, etc.',
-    'Strong understanding of design principles and best practices',
-    'Experience working in an agile development environment',
-    'Excellent communication and presentation skills',
-  ],
-  benefits: [
-    'Competitive salary and comprehensive benefits package',
-    'Health, dental, and vision insurance',
-    'Unlimited vacation policy',
-    'Free Netflix subscription',
-    '401(k) matching',
-    'Professional development budget',
-  ],
-  isActive: true,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-};
+import { Job, JobFormData } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { jobService } from '@/services/jobService';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
   
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setJob(mockJob);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [id]);
+    if (!token || !id) return;
+    setIsLoading(true);
+    jobService.getById(token, id)
+      .then(setJob)
+      .catch(() => setJob(null))
+      .finally(() => setIsLoading(false));
+  }, [id, token]);
 
-  const handleDelete = () => {
-    navigate('/jobs');
+  const handleDelete = async () => {
+    if (!token || !id) return;
+    try {
+      await jobService.delete(token, id);
+      navigate('/jobs');
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+    }
   };
 
-  const handleToggleStatus = () => {
-    if (job) {
-      setJob({ ...job, isActive: !job.isActive });
+  const handleToggleStatus = async () => {
+    if (!token || !id || !job) return;
+    const newStatus = !job.isActive;
+    try {
+      await jobService.update(token, id, { isActive: newStatus } as Partial<JobFormData>);
+      setJob({ ...job, isActive: newStatus });
+    } catch (error) {
+      console.error('Failed to toggle status:', error);
     }
   };
 

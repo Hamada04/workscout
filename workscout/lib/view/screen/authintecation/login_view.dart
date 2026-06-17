@@ -18,9 +18,16 @@ class LoginView extends StatefulWidget {
 }
 
 class _LoginViewState extends State<LoginView> {
+  late LoginControllerImp controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(LoginControllerImp());
+  }
+
   @override
   Widget build(BuildContext context) {
-    LoginControllerImp controller = Get.put(LoginControllerImp());
     return Scaffold(
       body: Form(
         key: controller.loginFormstate,
@@ -45,41 +52,20 @@ class _LoginViewState extends State<LoginView> {
                         children: [
                           const SizedBox(height: 70),
 
-                          // CustomTextForm(
-                          //   valid: (val) {
-                          //     return validInput(val!, 5, 100, "email");
-                          //   },
-                          //   hinttext: "Please enter your email address",
-                          //   title: "Email",
-                          // ),
+                          CustomTextForm(
+                            mycontroller: controller.email,
+                            valid: (val) => validInput(val!, 5, 100, "email"),
+                            hinttext: "Please enter your email address",
+                            title: "Email",
+                          ),
 
-                          // CustomTextForm(
-                          //   valid: (val) {
-                          //     return validInput(val!, 8, 30, "password");
-                          //   },
-                          //   hinttext: "Please enter your password",
-                          //   title: "Password",
-                          //   suffixIcon: IconButton(
-                          //     onPressed: () {},
-                          //     icon: Icon(Icons.visibility),
-                          //   ),
-                          //   obscureTextStatus: true,
-                          // ),
-                          // أجزاء من كود LoginView المحدث
-CustomTextForm(
-  mycontroller: controller.email, // ربط حقل الإيميل
-  valid: (val) => validInput(val!, 5, 100, "email"),
-  hinttext: "Please enter your email address",
-  title: "Email",
-),
-
-CustomTextForm(
-  mycontroller: controller.password, // ربط حقل كلمة المرور
-  valid: (val) => validInput(val!, 8, 30, "password"),
-  hinttext: "Please enter your password",
-  title: "Password",
-  obscureTextStatus: true,
-),
+                          CustomTextForm(
+                            mycontroller: controller.password,
+                            valid: (val) => validInput(val!, 8, 30, "password"),
+                            hinttext: "Please enter your password",
+                            title: "Password",
+                            obscureTextStatus: true,
+                          ),
                           Container(
                             alignment: Alignment.bottomLeft,
                             child: const Text(
@@ -105,7 +91,6 @@ CustomTextForm(
                           LoginWithGoogle(text: "Login with Google"),
                           const SizedBox(height: 22),
 
-                          //Don't have an account?
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/src/root/get_material_app.dart';
+import 'package:get/get.dart';
+import 'package:workscout/controller/application_controller.dart';
+import 'package:workscout/controller/auth_controller.dart';
+import 'package:workscout/controller/job_controller.dart';
 import 'package:workscout/routes.dart';
-// لا داعي لاستيراد كل الصفحات هنا لأننا نستخدم ملف routes.dart الخارجي
 
 void main() {
   runApp(const MyApp());
@@ -12,6 +14,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Get.put(AuthController());
+    Get.put(JobController());
+    Get.lazyPut(() => ApplicationController());
+
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'WorkScout App',
@@ -19,7 +25,6 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      // بدلاً من استخدام home، نستخدم initialRoute ليعتمد على التقسيم الموجود في ملف routes.dart
       initialRoute: "/", 
       routes: routes,
     );

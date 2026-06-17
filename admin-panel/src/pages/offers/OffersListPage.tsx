@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Send, CheckCircle, XCircle, Clock, FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { offerService } from '@/services/offerService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -9,72 +11,17 @@ import {
   Badge,
   EmptyState
 } from '@/components/common';
-import { formatDate, timeAgo } from '@/utils/helpers';
-import { OfferLetter } from '@/types';
-
-// Mock data
-const mockOffers: (OfferLetter & { user: { name: string; email: string }; job: { jobTitle: string; companyName: string } })[] = [
-  {
-    _id: '1',
-    applicationId: 'a1',
-    userId: 'u1',
-    user: { name: 'Sarah Johnson', email: 'sarah@example.com' },
-    job: { jobTitle: 'Senior UI Designer', companyName: 'Netflix' },
-    position: 'Senior UI Designer',
-    startDate: '2026-06-01',
-    salary: '$ 15,000/month',
-    location: 'California, USA',
-    reportingTo: 'Design Director',
-    responsibilities: 'Lead UI design projects...',
-    benefits: 'Health, dental, vision...',
-    termsAndConditions: 'Standard employment terms...',
-    status: 'pending',
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: '2',
-    applicationId: 'a2',
-    userId: 'u2',
-    user: { name: 'Michael Chen', email: 'michael@example.com' },
-    job: { jobTitle: 'Flutter Developer', companyName: 'Telegram' },
-    position: 'Senior Flutter Developer',
-    startDate: '2026-05-15',
-    salary: '$ 12,000/month',
-    location: 'Remote',
-    reportingTo: 'Engineering Manager',
-    responsibilities: 'Develop mobile applications...',
-    benefits: 'Remote work, equipment...',
-    termsAndConditions: 'Standard employment terms...',
-    status: 'accepted',
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    respondedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: '3',
-    applicationId: 'a3',
-    userId: 'u3',
-    user: { name: 'Emma Wilson', email: 'emma@example.com' },
-    job: { jobTitle: 'Product Manager', companyName: 'Invision' },
-    position: 'Product Manager',
-    startDate: '2026-04-01',
-    salary: '$ 14,000/month',
-    location: 'New York, USA',
-    reportingTo: 'VP of Product',
-    responsibilities: 'Lead product strategy...',
-    benefits: 'Comprehensive benefits...',
-    termsAndConditions: 'Standard employment terms...',
-    status: 'declined',
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    respondedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+import { timeAgo } from '@/utils/helpers';
+import { OfferLetter, User, Job } from '@/types';
 
 const getStatusBadge = (status: string) => {
   switch (status) {
+    case 'sent':
     case 'pending':
       return <Badge variant="warning" dot>Pending</Badge>;
     case 'accepted':
       return <Badge variant="success" dot>Accepted</Badge>;
+    case 'rejected':
     case 'declined':
       return <Badge variant="danger" dot>Declined</Badge>;
     default:
@@ -84,10 +31,23 @@ const getStatusBadge = (status: string) => {
 
 export default function OffersListPage() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   
-  const [offers, setOffers] = useState(mockOffers);
-  const [isLoading, setIsLoading] = useState(false);
+  const [offers, setOffers] = useState<OfferLetter[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+
+  useEffect(() => {
+    if (!token) return;
+    setIsLoading(true);
+    offerService.getAll(token)
+      .then((res) => {
+        const items = (res as unknown as Record<string, unknown>)['offers'] as OfferLetter[] ?? [];
+        setOffers(items);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [token]);
 
   const filteredOffers = useMemo(() => {
     return offers.filter(offer => {
@@ -101,27 +61,33 @@ export default function OffersListPage() {
       key: 'user',
       label: 'Candidate',
       sortable: true,
-      render: (offer: typeof mockOffers[0]) => (
-        <div>
-          <p className="font-medium text-gray-900">{offer.user.name}</p>
-          <p className="text-sm text-gray-500">{offer.user.email}</p>
-        </div>
-      ),
+      render: (offer: OfferLetter) => {
+        const user = offer.userId as User;
+        return (
+          <div>
+            <p className="font-medium text-gray-900">{user.name}</p>
+            <p className="text-sm text-gray-500">{user.email}</p>
+          </div>
+        );
+      },
     },
     {
       key: 'job',
       label: 'Position',
-      render: (offer: typeof mockOffers[0]) => (
-        <div>
-          <p className="font-medium text-gray-900">{offer.position}</p>
-          <p className="text-sm text-gray-500">{offer.job.companyName}</p>
-        </div>
-      ),
+      render: (offer: OfferLetter) => {
+        const job = offer.jobId as Job;
+        return (
+          <div>
+            <p className="font-medium text-gray-900">{offer.position}</p>
+            <p className="text-sm text-gray-500">{job?.companyName ?? ''}</p>
+          </div>
+        );
+      },
     },
     {
       key: 'salary',
       label: 'Salary',
-      render: (offer: typeof mockOffers[0]) => (
+      render: (offer: OfferLetter) => (
         <span className="font-medium text-gray-900">{offer.salary}</span>
       ),
     },
@@ -129,20 +95,20 @@ export default function OffersListPage() {
       key: 'status',
       label: 'Status',
       sortable: true,
-      render: (offer: typeof mockOffers[0]) => getStatusBadge(offer.status),
+      render: (offer: OfferLetter) => getStatusBadge(offer.status),
     },
     {
       key: 'createdAt',
       label: 'Sent',
       sortable: true,
-      render: (offer: typeof mockOffers[0]) => (
-        <span className="text-gray-500 text-sm">{timeAgo(offer.createdAt)}</span>
+      render: (offer: OfferLetter) => (
+        <span className="text-gray-500 text-sm">{timeAgo(offer.createdAt ?? '')}</span>
       ),
     },
     {
       key: 'actions',
       label: 'Actions',
-      render: (offer: typeof mockOffers[0]) => (
+      render: (offer: OfferLetter) => (
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => { e.stopPropagation(); navigate(`/offers/${offer._id}`); }}
@@ -163,11 +129,10 @@ export default function OffersListPage() {
     },
   ];
 
-  // Status counts
   const statusCounts = useMemo(() => ({
-    pending: offers.filter(o => o.status === 'pending').length,
+    pending: offers.filter(o => o.status === 'sent' || o.status === 'pending').length,
     accepted: offers.filter(o => o.status === 'accepted').length,
-    declined: offers.filter(o => o.status === 'declined').length,
+    declined: offers.filter(o => o.status === 'rejected' || o.status === 'declined').length,
   }), [offers]);
 
   return (
@@ -180,7 +145,6 @@ export default function OffersListPage() {
         addButtonText="Create Offer"
       />
 
-      {/* Status Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card 
           hover 
@@ -229,7 +193,6 @@ export default function OffersListPage() {
         </Card>
       </div>
 
-      {/* Offers Table */}
       <Card padding="none">
         <DataTable
           columns={columns}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { jobService } from '@/services/jobService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -40,30 +42,75 @@ const experienceOptions = EXPERIENCE_LEVELS.map(e => ({ value: e, label: e }));
 export default function JobFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { token } = useAuth();
   const isEditing = !!id;
   
   const [formData, setFormData] = useState<JobFormData>(emptyForm);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isEditing) {
-      // Load job data for editing
-      setIsLoading(false);
+    if (isEditing && token) {
+      setIsLoading(true);
+      jobService.getById(token, id!)
+        .then(res => {
+          const job = res as unknown as Record<string, unknown>;
+          setFormData({
+            companyName: (job['companyName'] as string) || '',
+            jobTitle: (job['jobTitle'] as string) || '',
+            location: (job['location'] as string) || '',
+            jobType: (job['jobType'] as string) || 'Fulltime',
+            contractType: (job['contractType'] as string) || 'Permanent',
+            experienceLevel: (job['experienceLevel'] as string) || 'Senior',
+            salary: (job['salary'] as string) || '',
+            companyLogo: (job['companyLogo'] as string) || '',
+            category: (job['category'] as string) || 'Technology',
+            description: (job['description'] as string) || '',
+            officeAddress: (job['officeAddress'] as string) || '',
+            skills: (job['skills'] as string[]) || [],
+            responsibilities: (job['responsibilities'] as string[]) || [],
+            requirements: (job['requirements'] as string[]) || [],
+            benefits: (job['benefits'] as string[]) || [],
+          });
+        })
+        .catch(() => {})
+        .finally(() => setIsLoading(false));
     }
-  }, [id]);
+  }, [id, token]);
 
   const handleChange = (field: keyof JobFormData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async () => {
+    if (!token) return;
+    setSubmitError(null);
+
+    const requiredFields: (keyof JobFormData)[] = [
+      'companyName', 'jobTitle', 'location', 'salary', 'description', 'officeAddress'
+    ];
+    const missing = requiredFields.filter(f => !formData[f]?.toString().trim());
+    if (missing.length > 0) {
+      setSubmitError(`Please fill in: ${missing.join(', ')}`);
+      return;
+    }
+
     setIsSaving(true);
-    // API call would go here
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      if (isEditing) {
+        await jobService.update(token, id!, formData);
+      } else {
+        await jobService.create(token, formData);
+      }
       navigate('/jobs');
-    }, 1000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save job';
+      setSubmitError(message);
+      console.error('Job save failed:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -146,6 +193,18 @@ export default function JobFormPage() {
                 onChange={(e) => handleChange('experienceLevel', e.target.value)}
                 options={experienceOptions}
               />
+              <Select
+                label="Contract Type"
+                value={formData.contractType}
+                onChange={(e) => handleChange('contractType', e.target.value)}
+                options={[
+                  { value: 'Permanent', label: 'Permanent' },
+                  { value: 'Contract', label: 'Contract' },
+                  { value: 'Temporary', label: 'Temporary' },
+                  { value: 'Internship', label: 'Internship' },
+                  { value: 'Freelance', label: 'Freelance' },
+                ]}
+              />
               <Input
                 label="Salary"
                 value={formData.salary}
@@ -182,9 +241,20 @@ export default function JobFormPage() {
                 onChange={(value) => handleChange('benefits', value)}
                 placeholder="Type benefit and press Enter"
               />
+              <ChipsInput
+                label="Responsibilities"
+                value={formData.responsibilities}
+                onChange={(value) => handleChange('responsibilities', value)}
+                placeholder="Type responsibility and press Enter"
+              />
             </div>
           </Card>
 
+          {submitError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {submitError}
+            </div>
+          )}
           {/* Form Actions */}
           <FormActions
             onCancel={() => navigate('/jobs')}

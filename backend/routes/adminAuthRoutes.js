@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const adminAuth = require('../middleware/adminAuth');
 
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res, next) => {
     try {
         const { email, password } = req.body;
         
@@ -26,7 +26,7 @@ router.post('/login', async (req, res) => {
 
         const token = jwt.sign(
             { id: user._id, role: user.role },
-            process.env.JWT_SECRET || 'secret_key_123',
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -41,16 +41,15 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Admin login error:', err);
-        res.status(500).json({ message: 'Server error' });
+        next(err);
     }
 });
 
-router.get('/me', adminAuth, async (req, res) => {
+router.get('/me', adminAuth, async (req, res, next) => {
     try {
         res.json({ user: req.user });
     } catch (err) {
-        res.status(500).json({ message: 'Server error' });
+        next(err);
     }
 });
 

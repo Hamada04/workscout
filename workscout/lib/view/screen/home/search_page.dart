@@ -355,8 +355,8 @@
 //   }
 // }
 import 'package:flutter/material.dart';
-import 'package:workscout/data/datasource/data_test.dart';
-// مسارات الاستيراد الخاصة بمشروعك
+import 'package:get/get.dart';
+import 'package:workscout/controller/job_controller.dart';
 import 'package:workscout/data/model/job_model.dart';
 import 'package:workscout/view/screen/home/job_details.dart';
 
@@ -368,6 +368,7 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  final JobController _jobCtrl = Get.find<JobController>();
   final TextEditingController _searchController = TextEditingController();
   List<Job> _searchResults = [];
   bool _isSearching = false; 
@@ -402,7 +403,7 @@ class _SearchPageState extends State<SearchPage> {
       }
       
       // الفلترة بناءً على المسمى، الشركة، أو التصنيف
-      _searchResults = allJobs.where((job) =>
+      _searchResults = _jobCtrl.jobs.where((job) =>
           job.jobTitle.toLowerCase().contains(query.toLowerCase()) ||
           job.companyName.toLowerCase().contains(query.toLowerCase()) ||
           job.category.toLowerCase().contains(query.toLowerCase())

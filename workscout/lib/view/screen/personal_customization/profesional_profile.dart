@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_navigation/get_navigation.dart';
-import 'package:get/instance_manager.dart';
-import 'package:get/utils.dart';
+import 'package:get/get.dart';
 import 'package:workscout/controller/personal_customization/profecional_controller.dart';
 import 'package:workscout/core/constant/color.dart';
 import 'package:workscout/functions/validinput.dart';
@@ -12,12 +10,24 @@ import 'package:workscout/view/widget/personal_customization/personal_header.dar
 import 'package:workscout/view/widget/personal_customization/personal_multiline_text.dart';
 import 'package:workscout/view/widget/personal_customization/personal_title.dart';
 
-class ProfesionalProfile extends StatelessWidget {
+class ProfesionalProfile extends StatefulWidget {
   const ProfesionalProfile({super.key});
 
   @override
+  State<ProfesionalProfile> createState() => _ProfesionalProfileState();
+}
+
+class _ProfesionalProfileState extends State<ProfesionalProfile> {
+  late ProfecionalControllerImp controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(ProfecionalControllerImp());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    ProfecionalControllerImp controller = Get.put(ProfecionalControllerImp());
     return Scaffold(
       body: Container(
         padding: EdgeInsets.symmetric(horizontal: 18),
@@ -47,7 +57,6 @@ class ProfesionalProfile extends StatelessWidget {
                       hinttext: "e.g UI/UX Desiner. Project Manger ",
                       title: "Profecional profile",
                     ),
-
                     PersonalMultilineText(
                       valid: (val) {
                         return validInput(val!, 5, 100, "");
@@ -55,7 +64,6 @@ class ProfesionalProfile extends StatelessWidget {
                       text: "Profile Summary",
                       hintText: "Your profecional profile summary",
                     ),
-
                     CustomTextForm(
                       valid: (val) {
                         return validInput(val!, 10, 15, "phone");
@@ -86,7 +94,6 @@ class ProfesionalProfile extends StatelessWidget {
                       Get.back();
                     },
                   ),
-
                   PersonalButtonTwo(
                     text: "Next",
                     onPressed: () {

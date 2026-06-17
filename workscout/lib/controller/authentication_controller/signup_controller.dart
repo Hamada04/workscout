@@ -19,8 +19,7 @@
 // }
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:workscout/data/datasource/data_test.dart';
-import 'package:workscout/services/auth_service.dart'; // تأكد من المسار الصحيح للخدمة
+import 'package:workscout/services/auth_service.dart';
 
 abstract class SignupController extends GetxController {
   signup();
@@ -28,22 +27,18 @@ abstract class SignupController extends GetxController {
 
 class SignupControllerImp extends SignupController {
   GlobalKey<FormState> SignupFormstate = GlobalKey<FormState>();
-  
-  // تعريف وحدات التحكم للنصوص لسحب البيانات من الحقول
+
   late TextEditingController username;
   late TextEditingController email;
   late TextEditingController password;
 
-  
-  AuthService authService = AuthService(); // استدعاء خدمة الاتصال بالسيرفر
+  AuthService authService = AuthService();
 
+  bool isShowPassword = true;
 
-   bool isShowPassword = true; // المتغير المسؤول عن الإخفاء والإظهار
-
-  @override
-  showPassword() {
+  void showPassword() {
     isShowPassword = !isShowPassword;
-    update(); // لتحديث الواجهة (تعمل مع GetBuilder)
+    update();
   }
   @override
   void onInit() {
@@ -74,7 +69,6 @@ signup() async {
       email.text, 
       password.text
     );
-    currentUser.name=username.text;
 
     // 3. طباعة رد السيرفر عشان نعرف شو صار
     print("📡 رد السيرفر النهائي: $response");

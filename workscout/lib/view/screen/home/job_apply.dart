@@ -188,8 +188,8 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:workscout/data/datasource/data_test.dart';
-// مسار الاستيراد الخاص بك كما طلبت
+import 'package:get/get.dart';
+import 'package:workscout/controller/application_controller.dart';
 import 'package:workscout/data/model/job_model.dart';
 
 class ApplyJobPage extends StatefulWidget {
@@ -207,7 +207,9 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
   // متغيرات لإدارة الملف المرفوع
   String? _fileName;
   String? _fileSize;
+  String? _selectedFilePath;
   bool _isFileSelected = false;
+  bool _isSubmitting = false;
 
   // دالة اختيار ملف الـ PDF من الجهاز
   Future<void> _pickPDF() async {
@@ -221,7 +223,7 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
         PlatformFile file = result.files.first;
         setState(() {
           _fileName = file.name;
-          // تحويل حجم الملف إلى كيلوبايت أو ميجابايت للعرض
+          _selectedFilePath = file.path;
           double sizeInMb = file.size / (1024 * 1024);
           _fileSize = "${sizeInMb.toStringAsFixed(2)} MB";
           _isFileSelected = true;
@@ -441,49 +443,33 @@ Widget _buildApplyButton() {
     width: double.infinity,
     height: 55,
     child: ElevatedButton(
-      onPressed: _isFileSelected 
-        ? () {
-            // 1. إنشاء كائن تقديم جديد وربطه بالوظيفة الحالية
-            final newApplication = JobApplication(
-              job: widget.job, // الوظيفة التي نفتح صفحتها حالياً
-              status: 'Submitted', // الحالة الابتدائية
-              appliedDate: "Dec 25, 2025", // التاريخ الحالي
-              adminMessage: "Pending company review", // رسالة افتراضية
-            );
-
-            // 2. إضافة الطلب إلى قائمة التقديمات المركزية في ملف data.dart
-            setState(() {
-              myApplications.add(newApplication);
-            });
-
-            // 3. عرض رسالة نجاح والعودة للشاشة الرئيسية
-            showDialog(
-              context: context,
-              builder: (c) => AlertDialog(
-                title: const Text("Success"),
-                content: const Text("Your application has been stored and sent to the employer!"),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(c); // إغلاق الدايلوج
-                      Navigator.of(context).popUntil((route) => route.isFirst); // العودة للـ Home
-                    }, 
-                    child: const Text("OK")
-                  )
-                ],
-              ),
-            );
-          } 
-        : null, 
+      onPressed: (_isFileSelected && !_isSubmitting)
+        ? () async {
+            setState(() => _isSubmitting = true);
+            try {
+              final appCtrl = Get.find<ApplicationController>();
+              await appCtrl.apply(
+                jobId: widget.job.id,
+                filePath: _selectedFilePath!,
+                fileName: _fileName!,
+                coverLetter: _coverLetterController.text,
+              );
+            } finally {
+              if (mounted) setState(() => _isSubmitting = false);
+            }
+          }
+        : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF435B66),
         disabledBackgroundColor: Colors.grey.shade300,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      child: const Text(
-        "Apply Now",
-        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-      ),
+      child: _isSubmitting
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+        : const Text(
+            "Apply Now",
+            style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
     ),
   );
 }

@@ -68,7 +68,7 @@ export default function JobsListPage() {
         category: categoryFilter,
       });
       
-      let filteredJobs = response.jobs;
+      let filteredJobs = response.jobs ?? [];
       if (typeFilter) {
         filteredJobs = filteredJobs.filter(j => j.jobType === typeFilter);
       }
@@ -84,13 +84,17 @@ export default function JobsListPage() {
   }, [token, currentPage, searchQuery, categoryFilter, typeFilter]);
 
   useEffect(() => {
-    loadJobs();
+    let cancelled = false;
+    loadJobs().then(() => {
+      if (cancelled) return;
+    });
+    return () => { cancelled = true; };
   }, [loadJobs]);
 
   const filteredJobs = useMemo(() => {
     if (statusFilter === '') return jobs;
-    return jobs.filter(job => 
-      statusFilter === 'active' || statusFilter === 'inactive'
+    return jobs.filter(job =>
+      statusFilter === 'active' ? job.isActive !== false : job.isActive === false
     );
   }, [jobs, statusFilter]);
 
@@ -105,7 +109,7 @@ export default function JobsListPage() {
             {job.companyLogo ? (
               <img src={job.companyLogo} alt={job.companyName} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-lg font-bold text-gray-400">{job.companyName[0]}</span>
+              <span className="text-lg font-bold text-gray-400">{job.companyName?.[0]}</span>
             )}
           </div>
           <div>

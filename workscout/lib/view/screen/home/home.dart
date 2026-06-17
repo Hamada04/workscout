@@ -1750,8 +1750,9 @@
 // }
 
 import 'package:flutter/material.dart';
-import 'package:get/route_manager.dart';
-import 'package:workscout/data/datasource/data_test.dart';
+import 'package:get/get.dart';
+import 'package:workscout/controller/auth_controller.dart';
+import 'package:workscout/controller/job_controller.dart';
 import 'package:workscout/data/model/job_model.dart';
 import 'package:workscout/view/screen/home/job_details.dart';
 import 'package:workscout/view/screen/home/notifications_page.dart';
@@ -1773,58 +1774,61 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // تصفية الوظائف بناءً على التصنيف المختار للقسم الأفقي (Curated Jobs)
-    List<Job> filteredCuratedJobs = allJobs
+    final jobCtrl = Get.find<JobController>();
+
+    List<Job> filteredCuratedJobs = jobCtrl.jobs
         .where((job) => job.category.toLowerCase() == selectedCategory.toLowerCase())
         .toList();
 
-    // نستخدم كل الوظائف لقسم الـ Recommendation أو نختار عينة منها
-    List<Job> recommendationJobs = allJobs;
+    List<Job> recommendationJobs = jobCtrl.jobs;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
       appBar: _buildAppBar(),
       // bottomNavigationBar: _buildBottomNav(),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              _buildSearchBar(),
-              const SizedBox(height: 15),
-              _buildLocationFilter(),
-              const SizedBox(height: 20),
-              _buildPromoBanner(),
-              const SizedBox(height: 25),
-              _buildSectionHeader("Curated Jobs For You"),
-              const SizedBox(height: 10),
-              
-              // قسم التصنيفات مع ميزة الضغط والفلترة
-              _buildCategoriesList(),
-              
-              const SizedBox(height: 15),
-              
-              // القائمة الأفقية المفلترة
-              filteredCuratedJobs.isEmpty 
-                ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No jobs in this category")))
-                : _buildHorizontalList(filteredCuratedJobs),
-              
-              const SizedBox(height: 25),
-              _buildSectionHeader("Specialization"),
-              const SizedBox(height: 15),
-              _buildSpecializationGrid(),
-              const SizedBox(height: 25),
-              _buildSectionHeader("Recommendation"),
-              const SizedBox(height: 15),
-              
-              // القائمة الرأسية الشاملة
-              _buildVerticalList(recommendationJobs),
-              
-              const SizedBox(height: 30),
-            ],
+        child: RefreshIndicator(
+          onRefresh: () => jobCtrl.fetchJobs(),
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                _buildSearchBar(),
+                const SizedBox(height: 15),
+                _buildLocationFilter(),
+                const SizedBox(height: 20),
+                _buildPromoBanner(),
+                const SizedBox(height: 25),
+                _buildSectionHeader("Curated Jobs For You"),
+                const SizedBox(height: 10),
+                
+                // قسم التصنيفات مع ميزة الضغط والفلترة
+                _buildCategoriesList(),
+                
+                const SizedBox(height: 15),
+                
+                // القائمة الأفقية المفلترة
+                filteredCuratedJobs.isEmpty 
+                  ? const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("No jobs in this category")))
+                  : _buildHorizontalList(filteredCuratedJobs),
+                
+                const SizedBox(height: 25),
+                _buildSectionHeader("Specialization"),
+                const SizedBox(height: 15),
+                _buildSpecializationGrid(),
+                const SizedBox(height: 25),
+                _buildSectionHeader("Recommendation"),
+                const SizedBox(height: 15),
+                
+                // القائمة الرأسية الشاملة
+                _buildVerticalList(recommendationJobs),
+                
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
       ),
@@ -1848,7 +1852,7 @@ class _HomePageState extends State<HomePage> {
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(currentUser.name, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(Get.find<AuthController>().currentUser.value?.name ?? '', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
           Row(
             children: const [
               Text("UI/UX Designer", style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -2120,8 +2124,9 @@ class JobCard extends StatefulWidget {
 class _JobCardState extends State<JobCard> {
   @override
   Widget build(BuildContext context) {
-    // التحقق هل الوظيفة محفوظة في قائمة المستخدم الحالية
-    bool isSaved = currentUser.savedJobsIds.contains(widget.job.id);
+    final authCtrl = Get.find<AuthController>();
+    final savedIds = authCtrl.currentUser.value?.savedJobsIds ?? [];
+    final isSaved = savedIds.contains(widget.job.id);
 
     return Container(
       width: widget.isHorizontal ? 260 : double.infinity,
@@ -2151,9 +2156,9 @@ class _JobCardState extends State<JobCard> {
                 onPressed: () {
                   setState(() {
                     if (isSaved) {
-                      currentUser.savedJobsIds.remove(widget.job.id);
+                      authCtrl.currentUser.value?.savedJobsIds.remove(widget.job.id);
                     } else {
-                      currentUser.savedJobsIds.add(widget.job.id);
+                      authCtrl.currentUser.value?.savedJobsIds.add(widget.job.id);
                     }
                   });
                 },

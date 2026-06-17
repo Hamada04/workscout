@@ -1,9 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:get/get_instance/src/extension_instance.dart';
-import 'package:get/get_navigation/get_navigation.dart';
-import 'package:get/utils.dart';
+import 'package:get/get.dart';
 import 'package:workscout/controller/personal_customization/personal_controller.dart';
 import 'package:workscout/core/constant/color.dart';
 import 'package:workscout/functions/validinput.dart';
@@ -13,14 +9,24 @@ import 'package:workscout/view/widget/personal_customization/personal_buttone_on
 import 'package:workscout/view/widget/personal_customization/personal_header.dart';
 import 'package:workscout/view/widget/personal_customization/personal_title.dart';
 
-class PersonalInformation extends StatelessWidget {
+class PersonalInformation extends StatefulWidget {
   const PersonalInformation({super.key});
 
   @override
+  State<PersonalInformation> createState() => _PersonalInformationState();
+}
+
+class _PersonalInformationState extends State<PersonalInformation> {
+  late PersonalInformationControllerImp controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.put(PersonalInformationControllerImp());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    PersonalInformationControllerImp controller = Get.put(
-      PersonalInformationControllerImp(),
-    );
     return Scaffold(
       body: Container(
         padding: EdgeInsets.symmetric(horizontal: 18),
@@ -82,7 +88,6 @@ class PersonalInformation extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   PersonalButtoneOne(text: "Back", onPressed: () {}),
-
                   PersonalButtonTwo(
                     text: "Next",
                     onPressed: () {

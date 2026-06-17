@@ -15,11 +15,11 @@ export const jobService = {
     if (params?.category) queryParams.append('category', params.category);
     
     const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-    return apiClient.get<PaginatedResponse<Job>>(`/admin/jobs/admin${query}`, token);
+    return apiClient.get<PaginatedResponse<Job>>(`/admin/jobs/${query}`, token);
   },
 
   getById: async (token: string, id: string) => {
-    return apiClient.get<ApiResponse<Job>>(`/jobs/${id}`, token);
+    return apiClient.get<Job>(`/admin/jobs/${id}`, token);
   },
 
   create: async (token: string, data: JobFormData) => {

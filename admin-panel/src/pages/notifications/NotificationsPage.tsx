@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Bell, Mail, CheckCircle, Trash2, Eye, Send } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { notificationService } from '@/services/notificationService';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { 
   Card, 
@@ -13,42 +15,8 @@ import {
   EmptyState,
   FormActions
 } from '@/components/common';
-import { formatDate, timeAgo } from '@/utils/helpers';
+import { timeAgo } from '@/utils/helpers';
 import { Notification } from '@/types';
-
-// Mock data
-const mockNotifications: Notification[] = [
-  {
-    _id: '1',
-    userId: 'u1',
-    type: 'offer',
-    title: 'Congratulations! Job Offer',
-    description: 'Netflix has sent you an offer letter for the UI/UX Designer position',
-    actionLabel: 'Review Offer',
-    isRead: false,
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: '2',
-    userId: 'u2',
-    type: 'application',
-    title: 'Application Sent',
-    description: 'Your application for Telegram has been submitted successfully',
-    actionLabel: 'View Application',
-    isRead: false,
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: '3',
-    userId: 'u3',
-    type: 'system',
-    title: 'Profile Updated',
-    description: 'Your profile information has been updated successfully',
-    actionLabel: '',
-    isRead: true,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
 
 const typeOptions = [
   { value: '', label: 'All Types' },
@@ -57,16 +25,10 @@ const typeOptions = [
   { value: 'system', label: 'System' },
 ];
 
-const userOptions = [
-  { value: '', label: 'All Users' },
-  { value: 'u1', label: 'Sarah Johnson' },
-  { value: 'u2', label: 'Michael Chen' },
-  { value: 'u3', label: 'Emma Wilson' },
-];
-
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState(mockNotifications);
-  const [isLoading, setIsLoading] = useState(false);
+  const { token } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [typeFilter, setTypeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,42 +37,76 @@ export default function NotificationsPage() {
     userId: '',
     type: 'system',
     title: '',
-    description: '',
-    actionLabel: '',
+    message: '',
   });
+
+  useEffect(() => {
+    if (!token) return;
+    setIsLoading(true);
+    notificationService.getAll(token)
+      .then((res) => {
+        const items = (res as unknown as Record<string, unknown>)['notifications'] as Notification[] ?? [];
+        setNotifications(items);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, [token]);
 
   const filteredNotifications = notifications.filter(n => {
     const matchesType = typeFilter === '' || n.type === typeFilter;
     const matchesSearch = searchQuery === '' || 
       n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (n.message ?? n.description ?? '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 
-  const handleCreate = () => {
-    const newNotification: Notification = {
-      _id: String(notifications.length + 1),
-      userId: formData.userId,
-      type: formData.type as 'offer' | 'application' | 'system',
-      title: formData.title,
-      description: formData.description,
-      actionLabel: formData.actionLabel,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    };
-    setNotifications([newNotification, ...notifications]);
-    setShowCreateModal(false);
-    setFormData({ userId: '', type: 'system', title: '', description: '', actionLabel: '' });
+  const handleCreate = async () => {
+    if (!token) return;
+    try {
+      if (formData.userId) {
+        await notificationService.send(token, {
+          userId: formData.userId,
+          title: formData.title,
+          message: formData.message || formData.title,
+          type: formData.type,
+        });
+      } else {
+        await notificationService.sendAll(token, {
+          title: formData.title,
+          message: formData.message || formData.title,
+          type: formData.type,
+        });
+      }
+      const res = await notificationService.getAll(token);
+      const items = (res as unknown as Record<string, unknown>)['notifications'] as Notification[] ?? [];
+      setNotifications(items);
+      setShowCreateModal(false);
+      setFormData({ userId: '', type: 'system', title: '', message: '' });
+    } catch {
+      // Handled by interceptor
+    }
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n._id === id ? { ...n, isRead: true } : n
-    ));
+  const handleMarkAsRead = async (id: string) => {
+    if (!token) return;
+    try {
+      await notificationService.markAsRead(token, id);
+      setNotifications(notifications.map(n => 
+        n._id === id ? { ...n, isRead: true } : n
+      ));
+    } catch {
+      // Handled by interceptor
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setNotifications(notifications.filter(n => n._id !== id));
+  const handleDelete = async (id: string) => {
+    if (!token) return;
+    try {
+      await notificationService.delete(token, id);
+      setNotifications(notifications.filter(n => n._id !== id));
+    } catch {
+      // Handled by interceptor
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -162,7 +158,7 @@ export default function NotificationsPage() {
           <p className={`font-medium ${n.isRead ? 'text-gray-600' : 'text-gray-900'}`}>
             {n.title}
           </p>
-          <p className="text-sm text-gray-500 mt-0.5">{n.description}</p>
+          <p className="text-sm text-gray-500 mt-0.5">{n.message ?? n.description}</p>
         </div>
       ),
     },
@@ -181,7 +177,7 @@ export default function NotificationsPage() {
       key: 'createdAt',
       label: 'Sent',
       render: (n: Notification) => (
-        <span className="text-gray-500 text-sm">{timeAgo(n.createdAt)}</span>
+        <span className="text-gray-500 text-sm">{timeAgo(n.createdAt ?? '')}</span>
       ),
     },
     {
@@ -220,7 +216,6 @@ export default function NotificationsPage() {
         addButtonText="Send Notification"
       />
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="text-center">
           <p className="text-2xl font-bold text-gray-900">{notifications.length}</p>
@@ -240,7 +235,6 @@ export default function NotificationsPage() {
         </Card>
       </div>
 
-      {/* Filters */}
       <Card>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
@@ -260,7 +254,6 @@ export default function NotificationsPage() {
         </div>
       </Card>
 
-      {/* Notifications List */}
       <Card padding="none">
         <DataTable
           columns={columns}
@@ -271,7 +264,6 @@ export default function NotificationsPage() {
         />
       </Card>
 
-      {/* Create Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
@@ -287,12 +279,11 @@ export default function NotificationsPage() {
         }
       >
         <div className="space-y-4">
-          <Select
-            label="User"
+          <Input
+            label="User ID (leave empty to send to all)"
             value={formData.userId}
             onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
-            options={userOptions}
-            placeholder="Select a user"
+            placeholder="User ID or empty for all users"
           />
           <Select
             label="Notification Type"
@@ -307,17 +298,11 @@ export default function NotificationsPage() {
             placeholder="Notification title"
           />
           <Textarea
-            label="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            label="Message"
+            value={formData.message}
+            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
             placeholder="Notification message..."
             rows={4}
-          />
-          <Input
-            label="Action Label (Optional)"
-            value={formData.actionLabel}
-            onChange={(e) => setFormData({ ...formData, actionLabel: e.target.value })}
-            placeholder="e.g., View Details"
           />
         </div>
       </Modal>

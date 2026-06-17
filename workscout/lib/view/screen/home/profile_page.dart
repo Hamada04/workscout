@@ -721,7 +721,7 @@ class _ProfilePageState extends State<ProfilePage> {
             // قسم التعليم (تم إصلاح الشاشة السوداء)
             _buildSectionHeader("Education", () => _showAddEducation(context)),
             ...currentUser.education.map((edu) => 
-              _buildEducationItem(edu.degree, edu.university, edu.level, edu.date)),
+              _buildEducationItem(edu.degree, edu.university, edu.date)),
             
             const SizedBox(height: 25),
             _buildSectionHeader("Skill", () => _showAddSkill(context)),
@@ -837,7 +837,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildEducationItem(String degree, String uni, String level, String date) {
+  Widget _buildEducationItem(String degree, String uni, String date) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: Row(children: [
@@ -910,7 +910,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _modalField("Degree", degC),
       _modalField("University", uniC),
     ], "Add Education", () {
-      setState(() => currentUser.education.add(Education(degree: degC.text, university: uniC.text, level: "Bachelor", date: "2024")));
+      setState(() => currentUser.education.add(Education(degree: degC.text, university: uniC.text, date: "2024")));
       Navigator.pop(context);
     });
   }

@@ -1,102 +1,5 @@
-// // model.dart
-// class Job {
-//   final String companyName;
-//   final String jobTitle;
-//   final String location;
-//   final String jobType;
-//   final String contractType;
-//   final String experienceLevel;
-//   final String postedDate;
-
-//   Job({
-//     required this.companyName,
-//     required this.jobTitle,
-//     required this.location,
-//     required this.jobType,
-//     required this.contractType,
-//     required this.experienceLevel,
-//     required this.postedDate,
-//   });
-
-//   // من أجل تحويل البيانات من JSON إلى موديل
-//   factory Job.fromJson(Map<String, dynamic> json) {
-//     return Job(
-//       companyName: json['companyName'],
-//       jobTitle: json['jobTitle'],
-//       location: json['location'],
-//       jobType: json['jobType'],
-//       contractType: json['contractType'],
-//       experienceLevel: json['experienceLevel'],
-//       postedDate: json['postedDate'],
-//     );
-//   }
-// }
-
-
-// class Job {
-//   final String companyName;
-//   final String jobTitle;
-//   final String location;
-//   final String jobType;
-//   final String contractType;
-//   final String experienceLevel;
-//   final String postedDate;
-//   final String salary;
-//   final String companyLogo;
-//   final List<String> skills;
-//   final String description;
-//   final List<String> responsibilities;
-//   final List<String> requirements;
-//   final List<String> benefits;
-//   final String officeAddress;
-//   final String category; // الحقل الجديد للفلترة
-
-//   Job({
-//     required this.companyName,
-//     required this.jobTitle,
-//     required this.location,
-//     required this.jobType,
-//     required this.contractType,
-//     required this.experienceLevel,
-//     required this.postedDate,
-//     required this.salary,
-//     required this.companyLogo,
-//     required this.skills,
-//     required this.description,
-//     required this.responsibilities,
-//     required this.requirements,
-//     required this.benefits,
-//     required this.officeAddress,
-//     required this.category, // تحديث الـ Constructor
-//   });
-
-//   factory Job.fromJson(Map<String, dynamic> json) {
-//     return Job(
-//       companyName: json['companyName'],
-//       jobTitle: json['jobTitle'],
-//       location: json['location'],
-//       jobType: json['jobType'],
-//       contractType: json['contractType'],
-//       experienceLevel: json['experienceLevel'],
-//       postedDate: json['postedDate'],
-//       salary: json['salary'],
-//       companyLogo: json['companyLogo'],
-//       skills: List<String>.from(json['skills']),
-//       description: json['description'],
-//       responsibilities: List<String>.from(json['responsibilities']),
-//       requirements: List<String>.from(json['requirements']),
-//       benefits: List<String>.from(json['benefits']),
-//       officeAddress: json['officeAddress'],
-//       category: json['category'], // تحديث الـ Factory
-//     );
-//   }
-// }
-
-// job_model.dart
-
-// 1. موديل الوظيفة (Job Model)
 class Job {
-  final String id; // حقل المعرف الفريد الضروري للباك آند
+  final String id;
   final String companyName;
   final String jobTitle;
   final String location;
@@ -115,7 +18,7 @@ class Job {
   final String category;
 
   Job({
-    required this.id, // تم إضافة الـ ID هنا
+    required this.id,
     required this.companyName,
     required this.jobTitle,
     required this.location,
@@ -136,77 +39,98 @@ class Job {
 
   factory Job.fromJson(Map<String, dynamic> json) {
     return Job(
-      id: json['_id'] ?? json['id'], // في MongoDB المعرف يكون غالباً باسم _id
-      companyName: json['companyName'],
-      jobTitle: json['jobTitle'],
-      location: json['location'],
-      jobType: json['jobType'],
-      contractType: json['contractType'],
-      experienceLevel: json['experienceLevel'],
-      postedDate: json['postedDate'],
-      salary: json['salary'],
-      companyLogo: json['companyLogo'],
-      skills: List<String>.from(json['skills']),
-      description: json['description'],
-      responsibilities: List<String>.from(json['responsibilities']),
-      requirements: List<String>.from(json['requirements']),
-      benefits: List<String>.from(json['benefits']),
-      officeAddress: json['officeAddress'],
-      category: json['category'],
+      id: json['_id'] ?? json['id'],
+      companyName: json['companyName'] ?? '',
+      jobTitle: json['jobTitle'] ?? '',
+      location: json['location'] ?? '',
+      jobType: json['jobType'] ?? '',
+      contractType: json['contractType'] ?? '',
+      experienceLevel: json['experienceLevel'] ?? '',
+      postedDate: json['postedDate'] ?? '',
+      salary: json['salary'] ?? '',
+      companyLogo: json['companyLogo'] ?? '',
+      skills: List<String>.from(json['skills'] ?? []),
+      description: json['description'] ?? '',
+      responsibilities: List<String>.from(json['responsibilities'] ?? []),
+      requirements: List<String>.from(json['requirements'] ?? []),
+      benefits: List<String>.from(json['benefits'] ?? []),
+      officeAddress: json['officeAddress'] ?? '',
+      category: json['category'] ?? '',
     );
   }
 }
 
-// 2. موديل الخبرات (Experience Model) لصفحة البروفايل
 class Experience {
-  final String title;
-  final String company;
-  final String date;
-  final String logo;
+  String title;
+  String company;
+  String date;
+  String logo;
 
   Experience({
     required this.title,
     required this.company,
     required this.date,
-    required this.logo,
+    this.logo = '',
   });
+
+  factory Experience.fromJson(Map<String, dynamic> json) {
+    return Experience(
+      title: json['title'] ?? '',
+      company: json['company'] ?? '',
+      date: json['date'] ?? '',
+      logo: json['logo'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'company': company,
+      'date': date,
+      if (logo.isNotEmpty) 'logo': logo,
+    };
+  }
 }
 
-// 3. موديل المستخدم (UserProfile Model)
-// class UserProfile {
-//   final String name;
-//   final String position;
-//   final String location;
-//   final String profilePic;
-//   final List<Experience> experiences;
-//   final List<String> skills;
-//   final List<String> languages;
-//   final List<String> savedJobsIds; // قائمة تحتوي على الـ IDs للوظائف المحفوظة
-//   List<Education> education;
+class Education {
+  String degree;
+  String university;
+  String date;
 
-//   UserProfile({
-//     required this.name,
-//     required this.position,
-//     required this.location,
-//     required this.profilePic,
-//     required this.experiences,
-//     required this.skills,
-//     required this.languages,
-//     required this.savedJobsIds,
-//     required this.education
-//   });
-// }
-// 3. موديل المستخدم (UserProfile Model) المحدث
+  Education({
+    required this.degree,
+    required this.university,
+    required this.date,
+  });
+
+  factory Education.fromJson(Map<String, dynamic> json) {
+    return Education(
+      degree: json['degree'] ?? '',
+      university: json['university'] ?? '',
+      date: json['date'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'degree': degree,
+      'university': university,
+      'date': date,
+    };
+  }
+}
+
 class UserProfile {
-  String name;        // أزلنا كلمة final لنتمكن من تعديلها
-  String position;    // أزلنا كلمة final
-  String location;    // أزلنا كلمة final
-  String profilePic;  // أزلنا كلمة final
+  String name;
+  String position;
+  String location;
+  String profilePic;
   List<Experience> experiences;
   List<String> skills;
   List<String> languages;
-  List<String> savedJobsIds; 
-  List<Education> education; // أضفنا هذا الحقل
+  List<String> savedJobsIds;
+  List<Education> education;
+  String email;
 
   UserProfile({
     required this.name,
@@ -217,16 +141,57 @@ class UserProfile {
     required this.skills,
     required this.languages,
     required this.savedJobsIds,
-    required this.education, // تأكد أنه مطلوب هنا
+    required this.education,
+    this.email = '',
   });
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    final rawExperiences = json['experiences'] as List<dynamic>?;
+    final rawEducation = json['education'] as List<dynamic>?;
+
+    return UserProfile(
+      name: json['name'] ?? '',
+      position: json['position'] ?? json['role'] ?? '',
+      location: json['location'] ?? '',
+      profilePic: json['profilePic'] ?? '',
+      experiences: rawExperiences != null
+          ? rawExperiences
+              .map((e) => Experience.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : [],
+      skills: List<String>.from(json['skills'] ?? []),
+      languages: List<String>.from(json['languages'] ?? []),
+      savedJobsIds: List<String>.from(json['savedJobsIds'] ?? []),
+      education: rawEducation != null
+          ? rawEducation
+              .map((e) => Education.fromJson(e as Map<String, dynamic>))
+              .toList()
+          : [],
+      email: json['email'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'position': position,
+      'location': location,
+      'profilePic': profilePic,
+      'experiences': experiences.map((e) => e.toJson()).toList(),
+      'skills': skills,
+      'languages': languages,
+      'savedJobsIds': savedJobsIds,
+      'education': education.map((e) => e.toJson()).toList(),
+      'email': email,
+    };
+  }
 }
 
-// 4. موديل طلب التوظيف (Job Application Model)
 class JobApplication {
-  final Job job; // الوظيفة التي تم التقديم عليها
-  String status; // الحالات: 'Submitted', 'Interview', 'Accepted', 'Rejected'
+  final Job job;
+  String status;
   final String appliedDate;
-  final String? adminMessage; // الرسالة الحقيقية من صاحب العمل (الأدمن)
+  final String? adminMessage;
 
   JobApplication({
     required this.job,
@@ -234,15 +199,13 @@ class JobApplication {
     required this.appliedDate,
     this.adminMessage,
   });
-}
-// أضف هذا الموديل في ملف job_model.dart
-class Education {
-  String degree;
-  String university;
-  String level;
-  String date;
-  Education({required this.degree, required this.university, required this.level, required this.date});
-}
 
-// وتأكد أن UserProfile يحتوي على:
-// List<Education> education;
+  factory JobApplication.fromJson(Map<String, dynamic> json) {
+    return JobApplication(
+      job: Job.fromJson(json['job'] as Map<String, dynamic>),
+      status: json['status'] ?? 'pending',
+      appliedDate: json['appliedDate'] ?? '',
+      adminMessage: json['adminMessage'],
+    );
+  }
+}
