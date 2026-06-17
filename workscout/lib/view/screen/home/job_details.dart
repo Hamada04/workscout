@@ -205,10 +205,11 @@
 //   }
 // }
 import 'package:flutter/material.dart';
-import 'package:workscout/data/datasource/data_test.dart';
+import 'package:get/get.dart';
 // استيراد الموديلات والداتا
 import 'package:workscout/data/model/job_model.dart';
 import 'package:workscout/view/screen/home/job_apply.dart';
+import 'package:workscout/controller/job_controller.dart';
 
 class JobDetailsPage extends StatefulWidget {
   final Job job;
@@ -223,7 +224,8 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
   @override
   Widget build(BuildContext context) {
     // فحص ما إذا كانت الوظيفة محفوظة حالياً في قائمة المستخدم
-    bool isSaved = currentUser.savedJobsIds.contains(widget.job.id);
+    final jobCtrl = Get.find<JobController>();
+    bool isSaved = jobCtrl.savedJobIds.contains(widget.job.id);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -244,18 +246,15 @@ class _JobDetailsPageState extends State<JobDetailsPage> {
               isSaved ? Icons.bookmark : Icons.bookmark_border, 
               color: isSaved ? const Color(0xFF334E58) : Colors.black
             ), 
-            onPressed: () {
-              setState(() {
-                if (isSaved) {
-                  currentUser.savedJobsIds.remove(widget.job.id);
-                } else {
-                  currentUser.savedJobsIds.add(widget.job.id);
-                }
-              });
+            onPressed: () async {
+              final wasSaved = jobCtrl.savedJobIds.contains(widget.job.id);
+              await jobCtrl.toggleBookmark(widget.job.id);
+              if (!mounted) return;
+              setState(() {});
               // تنبيه بسيط للمستخدم (اختياري)
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(isSaved ? "Removed from saved jobs" : "Job saved successfully"),
+                  content: Text(wasSaved ? "Removed from saved jobs" : "Job saved successfully"),
                   duration: const Duration(seconds: 1),
                 ),
               );

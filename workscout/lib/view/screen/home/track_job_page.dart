@@ -491,10 +491,12 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:workscout/data/datasource/data_test.dart';
 // استيراد الموديلات والبيانات المركزية
 import 'package:workscout/data/model/job_model.dart';
 import 'package:workscout/view/screen/home/job_details.dart';
+import 'package:workscout/controller/job_controller.dart';
 
 class TrackJobPage extends StatefulWidget {
   const TrackJobPage({super.key});
@@ -510,6 +512,7 @@ class _TrackJobPageState extends State<TrackJobPage> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    Get.find<JobController>().fetchSavedJobs();
   }
 
   @override
@@ -576,24 +579,24 @@ class _TrackJobPageState extends State<TrackJobPage> with SingleTickerProviderSt
     );
   }
 
-  // --- التبويب الثاني: يعتمد على فلترة allJobs بناءً على savedJobsIds ---
+  // --- التبويب الثاني: يقـرأ من JobController.savedJobs التفاعلية ---
   Widget _buildSavedJobsTab() {
-    // جلب الوظائف المحفوظة فقط
-    final List<Job> savedJobs = allJobs.where((job) => 
-      currentUser.savedJobsIds.contains(job.id)).toList();
+    final jobCtrl = Get.find<JobController>();
 
-    if (savedJobs.isEmpty) {
-      return _buildEmptyState("You haven't saved any jobs yet.");
-    }
+    return Obx(() {
+      if (jobCtrl.savedJobs.isEmpty) {
+        return _buildEmptyState("You haven't saved any jobs yet.");
+      }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(20),
-      itemCount: savedJobs.length,
-      physics: const BouncingScrollPhysics(),
-      itemBuilder: (context, index) {
-        return _buildSavedJobCard(savedJobs[index]);
-      },
-    );
+      return ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: jobCtrl.savedJobs.length,
+        physics: const BouncingScrollPhysics(),
+        itemBuilder: (context, index) {
+          return _buildSavedJobCard(jobCtrl.savedJobs[index]);
+        },
+      );
+    });
   }
 
   // --- كرت التقديمات المحدث ---
@@ -677,10 +680,8 @@ class _TrackJobPageState extends State<TrackJobPage> with SingleTickerProviderSt
               ),
               IconButton(
                 icon: const Icon(Icons.bookmark, color: Color(0xFF334E58)),
-                onPressed: () {
-                  setState(() {
-                    currentUser.savedJobsIds.remove(job.id);
-                  });
+                onPressed: () async {
+                  await Get.find<JobController>().toggleBookmark(job.id);
                 },
               ),
             ],

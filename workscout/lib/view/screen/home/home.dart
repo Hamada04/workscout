@@ -2153,14 +2153,9 @@ class _JobCardState extends State<JobCard> {
                   isSaved ? Icons.bookmark : Icons.bookmark_border,
                   color: isSaved ? const Color(0xFF334E58) : Colors.grey,
                 ),
-                onPressed: () {
-                  setState(() {
-                    if (isSaved) {
-                      authCtrl.currentUser.value?.savedJobsIds.remove(widget.job.id);
-                    } else {
-                      authCtrl.currentUser.value?.savedJobsIds.add(widget.job.id);
-                    }
-                  });
+                onPressed: () async {
+                  await Get.find<JobController>().toggleBookmark(widget.job.id);
+                  setState(() {});
                 },
               ),
             ],

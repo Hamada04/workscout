@@ -19,4 +19,18 @@ class JobService {
     final response = await ApiClient.get('/jobs/$id');
     return Job.fromJson(response as Map<String, dynamic>);
   }
+
+  Future<void> saveJob(String jobId) async {
+    await ApiClient.post('/jobs/$jobId/save', body: {});
+  }
+
+  Future<void> unsaveJob(String jobId) async {
+    await ApiClient.delete('/jobs/$jobId/save');
+  }
+
+  Future<List<Job>> fetchSavedJobs() async {
+    final response = await ApiClient.get('/jobs/saved');
+    final List<dynamic> jsonList = response as List<dynamic>;
+    return jsonList.map((json) => Job.fromJson(json as Map<String, dynamic>)).toList();
+  }
 }
