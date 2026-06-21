@@ -4,6 +4,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const auth = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 // تسجيل حساب جديد
 router.post('/signup', async (req, res, next) => {
@@ -81,6 +82,17 @@ router.put('/update-profile', auth, async (req, res, next) => {
         }
 
         res.json({ message: "تم تحديث الملف الشخصي بنجاح", user: updatedUser });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// رفع السيرة الذاتية
+router.post('/upload-cv', auth, upload.single('cv'), async (req, res, next) => {
+    try {
+        const url = req.file ? `/uploads/${req.file.filename}` : '';
+        await User.findByIdAndUpdate(req.user._id, { cvUrl: url });
+        res.json({ success: true, data: { cvUrl: url } });
     } catch (err) {
         next(err);
     }

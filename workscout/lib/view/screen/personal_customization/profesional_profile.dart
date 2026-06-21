@@ -51,6 +51,7 @@ class _ProfesionalProfileState extends State<ProfesionalProfile> {
                 child: Column(
                   children: [
                     CustomTextForm(
+                      mycontroller: controller.positionCtrl,
                       valid: (val) {
                         return validInput(val!, 5, 20, "");
                       },
@@ -65,6 +66,7 @@ class _ProfesionalProfileState extends State<ProfesionalProfile> {
                       hintText: "Your profecional profile summary",
                     ),
                     CustomTextForm(
+                      mycontroller: controller.phoneCtrl,
                       valid: (val) {
                         return validInput(val!, 10, 15, "phone");
                       },
@@ -72,7 +74,8 @@ class _ProfesionalProfileState extends State<ProfesionalProfile> {
                       title: "Phone Number",
                     ),
                     CustomTextForm(
-                      valid: (val) {},
+                      mycontroller: controller.locationCtrl,
+                      valid: (val) => null,
                       hinttext: "Your location",
                       title: "Location",
                       suffixIcon: IconButton(

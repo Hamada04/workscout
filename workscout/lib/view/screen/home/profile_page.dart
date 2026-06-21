@@ -678,10 +678,12 @@
 //   }
 // }
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart'; // لرفع الـ CV
-import 'package:workscout/data/datasource/data_test.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:get/get.dart';
 import 'package:workscout/data/model/job_model.dart';
-
+import 'package:workscout/controller/application_controller.dart';
+import 'package:workscout/controller/auth_controller.dart';
+import 'package:workscout/services/api_client.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -691,9 +693,13 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  
-  // دالة لحساب عدد المقابلات
-  int _getInterviewCount() => myApplications.where((app) => app.status == 'Interview').length;
+  late final AuthController authCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    authCtrl = Get.find<AuthController>();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -703,57 +709,70 @@ class _ProfilePageState extends State<ProfilePage> {
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            _buildProfileHeader(),
-            const SizedBox(height: 30),
-            _buildStatsSection(),
-            const SizedBox(height: 30),
-            
-            // قسم الخبرات
-            _buildSectionHeader("Experience", () => _showAddExperience(context)),
-            ...currentUser.experiences.map((exp) => 
-              _buildExperienceItem(exp.title, exp.company, "Remote", exp.date, exp.logo)),
-            
-            const SizedBox(height: 25),
-            
-            // قسم التعليم (تم إصلاح الشاشة السوداء)
-            _buildSectionHeader("Education", () => _showAddEducation(context)),
-            ...currentUser.education.map((edu) => 
-              _buildEducationItem(edu.degree, edu.university, edu.date)),
-            
-            const SizedBox(height: 25),
-            _buildSectionHeader("Skill", () => _showAddSkill(context)),
-            _buildSkillsWrap(currentUser.skills),
-            
-            const SizedBox(height: 25),
-            _buildSectionHeader("Language", () => _showAddLanguage(context)),
-            _buildSkillsWrap(currentUser.languages),
-            
-            const SizedBox(height: 25),
-            _buildCVSection(context),
-            const SizedBox(height: 40),
-          ],
-        ),
+        child: Obx(() {
+          final user = authCtrl.currentUser.value;
+          return Column(
+            children: [
+              const SizedBox(height: 20),
+              _buildProfileHeader(user),
+              const SizedBox(height: 30),
+              _buildStatsSection(),
+              const SizedBox(height: 30),
+
+              // قسم الخبرات
+              _buildSectionHeader("Experience", () => _showAddExperience(context)),
+              ... (user?.experiences ?? []).map((exp) =>
+                _buildExperienceItem(exp.title, exp.company, "Remote", exp.date, exp.logo)),
+
+              const SizedBox(height: 25),
+
+              // قسم التعليم
+              _buildSectionHeader("Education", () => _showAddEducation(context)),
+              ... (user?.education ?? []).map((edu) =>
+                _buildEducationItem(edu.degree, edu.university, edu.date)),
+
+              const SizedBox(height: 25),
+              _buildSectionHeader("Skill", () => _showAddSkill(context)),
+              _buildSkillsWrap(user?.skills ?? []),
+
+              const SizedBox(height: 25),
+              _buildSectionHeader("Language", () => _showAddLanguage(context)),
+              _buildSkillsWrap(user?.languages ?? []),
+
+              const SizedBox(height: 25),
+              _buildCVSection(context),
+              const SizedBox(height: 40),
+            ],
+          );
+        }),
       ),
     );
   }
 
-  // --- 1. تعديل الاسم (Logic) ---
-  void _showEditNameDialog() {
-    final nameController = TextEditingController(text: currentUser.name);
-    showDialog(
+  // --- 1. تعديل الاسم (Logic via API) ---
+  Future<void> _showEditNameDialog() async {
+    final nameController = TextEditingController(text: authCtrl.currentUser.value?.name ?? '');
+    await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text("Edit Name"),
-        content: TextField(controller: nameController, decoration: const InputDecoration(hintText: "Enter your name")),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(hintText: "Enter your name"),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
           ElevatedButton(
-            onPressed: () {
-              setState(() => currentUser.name = nameController.text);
-              Navigator.pop(context);
+            onPressed: () async {
+              try {
+                await ApiClient.put('/auth/update-profile', body: {'name': nameController.text});
+                await authCtrl.fetchProfile();
+                if (ctx.mounted) Navigator.pop(ctx);
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Failed: $e')));
+                }
+              }
             },
             child: const Text("Save"),
           ),
@@ -764,9 +783,14 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // --- 2. رفع الـ CV (Logic) ---
   Future<void> _pickCV() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
     if (result != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Selected: ${result.files.first.name}")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Selected: ${result.files.first.name}")),
+      );
     }
   }
 
@@ -781,35 +805,36 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader(UserProfile? user) {
     return Column(
       children: [
-        CircleAvatar(radius: 50, backgroundImage: NetworkImage(currentUser.profilePic)),
+        CircleAvatar(radius: 50, backgroundImage: NetworkImage(user?.profilePic ?? '')),
         const SizedBox(height: 15),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(currentUser.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(user?.name ?? '', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(width: 5),
             IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.blueGrey), onPressed: _showEditNameDialog),
           ],
         ),
-        Text(currentUser.location, style: const TextStyle(color: Colors.grey)),
+        Text(user?.location ?? '', style: const TextStyle(color: Colors.grey)),
       ],
     );
   }
 
   Widget _buildStatsSection() {
-    return Row(
+    final appCtrl = Get.find<ApplicationController>();
+    return Obx(() => Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _statColumn("Applied", "${myApplications.length} Jobs"),
+        _statColumn("Applied", "${appCtrl.myApplications.length} Jobs"),
         _buildDivider(),
         _statColumn("Reviewed", "0 Jobs"),
         _buildDivider(),
-        _statColumn("Interview", "${_getInterviewCount()} Jobs"),
+        _statColumn("Interview", "0 Jobs"),
       ],
-    );
+    ));
   }
 
   Widget _statColumn(String label, String value) {
@@ -889,45 +914,91 @@ class _ProfilePageState extends State<ProfilePage> {
     ]);
   }
 
-  // --- Modals (Fixed) ---
+  // --- Modals (API-bound) ---
 
-  void _showAddExperience(BuildContext context) {
+  Future<void> _showAddExperience(BuildContext context) async {
     final posC = TextEditingController();
     final compC = TextEditingController();
     _showCustomModal(context, "Add Experience", [
       _modalField("Job Position", posC),
       _modalField("Company", compC),
-    ], "Add Experience", () {
-      setState(() => currentUser.experiences.add(Experience(title: posC.text, company: compC.text, date: "2024", logo: "https://via.placeholder.com/50")));
-      Navigator.pop(context);
+    ], "Add Experience", () async {
+      final user = authCtrl.currentUser.value;
+      if (user == null) return;
+      final newExp = Experience(title: posC.text, company: compC.text, date: "2024", logo: "");
+      final updatedExperiences = [...user.experiences, newExp];
+      try {
+        await ApiClient.put('/auth/update-profile', body: {
+          'experiences': updatedExperiences.map((e) => e.toJson()).toList(),
+        });
+        await authCtrl.fetchProfile();
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        }
+      }
     });
   }
 
-  void _showAddEducation(BuildContext context) {
+  Future<void> _showAddEducation(BuildContext context) async {
     final degC = TextEditingController();
     final uniC = TextEditingController();
     _showCustomModal(context, "Add Education", [
       _modalField("Degree", degC),
       _modalField("University", uniC),
-    ], "Add Education", () {
-      setState(() => currentUser.education.add(Education(degree: degC.text, university: uniC.text, date: "2024")));
-      Navigator.pop(context);
+    ], "Add Education", () async {
+      final user = authCtrl.currentUser.value;
+      if (user == null) return;
+      final newEdu = Education(degree: degC.text, university: uniC.text, date: "2024");
+      final updatedEducation = [...user.education, newEdu];
+      try {
+        await ApiClient.put('/auth/update-profile', body: {
+          'education': updatedEducation.map((e) => e.toJson()).toList(),
+        });
+        await authCtrl.fetchProfile();
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        }
+      }
     });
   }
 
-  void _showAddSkill(BuildContext context) {
+  Future<void> _showAddSkill(BuildContext context) async {
     final sC = TextEditingController();
-    _showCustomModal(context, "Add Skill", [_modalField("Skill", sC)], "Add Skill", () {
-      setState(() => currentUser.skills.add(sC.text));
-      Navigator.pop(context);
+    _showCustomModal(context, "Add Skill", [_modalField("Skill", sC)], "Add Skill", () async {
+      final user = authCtrl.currentUser.value;
+      if (user == null) return;
+      final updatedSkills = [...user.skills, sC.text];
+      try {
+        await ApiClient.put('/auth/update-profile', body: {'skills': updatedSkills});
+        await authCtrl.fetchProfile();
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        }
+      }
     });
   }
 
-  void _showAddLanguage(BuildContext context) {
+  Future<void> _showAddLanguage(BuildContext context) async {
     final lC = TextEditingController();
-    _showCustomModal(context, "Add Language", [_modalField("Language", lC)], "Add Language", () {
-      setState(() => currentUser.languages.add(lC.text));
-      Navigator.pop(context);
+    _showCustomModal(context, "Add Language", [_modalField("Language", lC)], "Add Language", () async {
+      final user = authCtrl.currentUser.value;
+      if (user == null) return;
+      final updatedLanguages = [...user.languages, lC.text];
+      try {
+        await ApiClient.put('/auth/update-profile', body: {'languages': updatedLanguages});
+        await authCtrl.fetchProfile();
+        if (context.mounted) Navigator.pop(context);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed: $e')));
+        }
+      }
     });
   }
 
@@ -947,7 +1018,7 @@ class _ProfilePageState extends State<ProfilePage> {
     child: TextField(controller: controller, decoration: InputDecoration(hintText: hint, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
   );
 
-  void _showCustomModal(BuildContext context, String title, List<Widget> children, String btnText, VoidCallback onSave) {
+  void _showCustomModal(BuildContext context, String title, List<Widget> children, String btnText, dynamic onSave) {
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
@@ -957,7 +1028,11 @@ class _ProfilePageState extends State<ProfilePage> {
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))]),
           const SizedBox(height: 20),
           ...children,
-          SizedBox(width: double.infinity, height: 50, child: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF334E58)), onPressed: onSave, child: Text(btnText, style: const TextStyle(color: Colors.white)))),
+          SizedBox(width: double.infinity, height: 50, child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF334E58)),
+            onPressed: () => onSave(),
+            child: Text(btnText, style: const TextStyle(color: Colors.white)),
+          )),
           const SizedBox(height: 20),
         ]),
       ),

@@ -50,6 +50,7 @@ class _PersonalInformationState extends State<PersonalInformation> {
                 child: Column(
                   children: [
                     CustomTextForm(
+                      mycontroller: controller.nameCtrl,
                       valid: (val) {
                         return validInput(val!, 5, 100, "username");
                       },
@@ -57,6 +58,7 @@ class _PersonalInformationState extends State<PersonalInformation> {
                       title: "Full Name",
                     ),
                     CustomTextForm(
+                      mycontroller: controller.emailCtrl,
                       valid: (val) {
                         return validInput(val!, 5, 100, "email");
                       },
@@ -64,6 +66,7 @@ class _PersonalInformationState extends State<PersonalInformation> {
                       title: "Email Addres",
                     ),
                     CustomTextForm(
+                      mycontroller: controller.phoneCtrl,
                       valid: (val) {
                         return validInput(val!, 10, 16, "phone");
                       },
@@ -71,7 +74,8 @@ class _PersonalInformationState extends State<PersonalInformation> {
                       title: "Phone Number",
                     ),
                     CustomTextForm(
-                      valid: (val) {},
+                      mycontroller: controller.locationCtrl,
+                      valid: (val) => null,
                       hinttext: "Your location",
                       title: "Location",
                       suffixIcon: IconButton(

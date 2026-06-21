@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, enum: ['user', 'admin'], default: 'user', index: true },
     location: { type: String, default: 'Jordan' },
     profilePic: { type: String, default: '' },
+    cvUrl: { type: String, default: '' },
     isBlocked: { type: Boolean, default: false },
     skills: [String],
     languages: [String],

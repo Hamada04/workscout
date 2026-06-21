@@ -190,10 +190,11 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
 import 'package:workscout/controller/application_controller.dart';
+import 'package:workscout/controller/auth_controller.dart';
 import 'package:workscout/data/model/job_model.dart';
 
 class ApplyJobPage extends StatefulWidget {
-  final Job job; // استقبال بيانات الوظيفة ديناميكياً
+  final Job job;
 
   const ApplyJobPage({super.key, required this.job});
 
@@ -203,20 +204,34 @@ class ApplyJobPage extends StatefulWidget {
 
 class _ApplyJobPageState extends State<ApplyJobPage> {
   final TextEditingController _coverLetterController = TextEditingController();
-  
-  // متغيرات لإدارة الملف المرفوع
+  late final AuthController authCtrl;
+
   String? _fileName;
   String? _fileSize;
   String? _selectedFilePath;
+  List<int>? _selectedFileBytes;
   bool _isFileSelected = false;
   bool _isSubmitting = false;
+  String? _storedCvUrl;
+  bool _isReplacing = false;
 
-  // دالة اختيار ملف الـ PDF من الجهاز
+  @override
+  void initState() {
+    super.initState();
+    authCtrl = Get.find<AuthController>();
+    final cvUrl = authCtrl.currentUser.value?.cvUrl ?? '';
+    if (cvUrl.isNotEmpty) {
+      _storedCvUrl = cvUrl;
+      _fileName = cvUrl.split('/').last;
+    }
+  }
+
   Future<void> _pickPDF() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf'],
+        withData: true,
       );
 
       if (result != null) {
@@ -224,15 +239,22 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
         setState(() {
           _fileName = file.name;
           _selectedFilePath = file.path;
+          _selectedFileBytes = file.bytes;
           double sizeInMb = file.size / (1024 * 1024);
           _fileSize = "${sizeInMb.toStringAsFixed(2)} MB";
           _isFileSelected = true;
+          _isReplacing = true;
         });
       }
     } catch (e) {
       debugPrint("Error picking file: $e");
     }
   }
+
+  bool get _canSubmit =>
+      !_isSubmitting &&
+      (_isFileSelected || (_storedCvUrl != null && _storedCvUrl!.isNotEmpty)) &&
+      _coverLetterController.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -350,14 +372,51 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
     );
   }
 
-  // قسم رفع الملف - يتغير شكله عند اختيار ملف
   Widget _buildResumeUploadSection() {
+    final hasStoredCV = _storedCvUrl != null && _storedCvUrl!.isNotEmpty && !_isReplacing;
+
+    if (hasStoredCV) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FFF0),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.green.shade200, width: 1),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.picture_as_pdf, color: Colors.red, size: 40),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _fileName ?? "CV from profile",
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "From your profile",
+                    style: TextStyle(color: Colors.grey, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.check_circle, color: Colors.green, size: 24),
+          ],
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: _pickPDF,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF9F2), // لون خلفية كما في الصورة
+          color: const Color(0xFFFFF9F2),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
             color: _isFileSelected ? Colors.orange.shade200 : Colors.grey.shade200,
@@ -395,13 +454,19 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
   }
 
   Widget _buildSelectExistingLink() {
-    return Row(
-      children: const [
-        Text("Select an existing resume",
-            style: TextStyle(color: Color(0xFF334E58), fontWeight: FontWeight.w600, fontSize: 13)),
-        SizedBox(width: 5),
-        Icon(Icons.arrow_forward, size: 14, color: Color(0xFF334E58)),
-      ],
+    final hasStoredCV = _storedCvUrl != null && _storedCvUrl!.isNotEmpty && !_isReplacing;
+    return InkWell(
+      onTap: hasStoredCV && !_isReplacing ? () => setState(() => _isReplacing = true) : _pickPDF,
+      child: Row(
+        children: [
+          Text(
+            hasStoredCV ? "Replace CV" : "Select an existing resume",
+            style: const TextStyle(color: Color(0xFF334E58), fontWeight: FontWeight.w600, fontSize: 13),
+          ),
+          const SizedBox(width: 5),
+          const Icon(Icons.arrow_forward, size: 14, color: Color(0xFF334E58)),
+        ],
+      ),
     );
   }
 
@@ -436,23 +501,23 @@ class _ApplyJobPageState extends State<ApplyJobPage> {
       ],
     );
   }
-// داخل apply_job_page.dart
-
 Widget _buildApplyButton() {
   return SizedBox(
     width: double.infinity,
     height: 55,
     child: ElevatedButton(
-      onPressed: (_isFileSelected && !_isSubmitting)
+      onPressed: _canSubmit
         ? () async {
             setState(() => _isSubmitting = true);
             try {
               final appCtrl = Get.find<ApplicationController>();
               await appCtrl.apply(
                 jobId: widget.job.id,
-                filePath: _selectedFilePath!,
-                fileName: _fileName!,
+                filePath: _isFileSelected ? _selectedFilePath : null,
+                fileName: _isFileSelected ? _fileName : null,
                 coverLetter: _coverLetterController.text,
+                cvUrl: (!_isFileSelected && _storedCvUrl != null) ? _storedCvUrl! : '',
+                bytes: _isFileSelected ? _selectedFileBytes : null,
               );
             } finally {
               if (mounted) setState(() => _isSubmitting = false);
@@ -474,35 +539,3 @@ Widget _buildApplyButton() {
   );
 }
 }
-//   Widget _buildApplyButton() {
-//     return SizedBox(
-//       width: double.infinity,
-//       height: 55,
-//       child: ElevatedButton(
-//         onPressed: _isFileSelected 
-//           ? () {
-//             // منطق الإرسال لـ MongoDB سيوضع هنا
-//             showDialog(
-//               context: context,
-//               builder: (c) => AlertDialog(
-//                 title: const Text("Success"),
-//                 content: const Text("Your application has been submitted!"),
-//                 actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text("OK"))],
-//               ),
-//             );
-//           } 
-//           : null, // الزر يكون معطل إذا لم يتم اختيار ملف
-//         style: ElevatedButton.styleFrom(
-//           backgroundColor: const Color(0xFF435B66),
-//           disabledBackgroundColor: Colors.grey.shade300,
-//           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//           elevation: 0,
-//         ),
-//         child: const Text(
-//           "Apply Now",
-//           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-//         ),
-//       ),
-//     );
-//   }
-// }

@@ -43,7 +43,7 @@ router.post('/create', auth, upload.single('cv'), async (req, res, next) => {
             jobId,
             userId: req.user._id,
             coverLetter: coverLetter || '',
-            cvUrl: req.file ? `/uploads/${req.file.filename}` : ''
+            cvUrl: req.file ? `/uploads/${req.file.filename}` : (req.body.cvUrl || '')
         });
 
         await application.save();
@@ -122,5 +122,4 @@ router.delete('/:id', adminAuth, async (req, res, next) => {
         next(err);
     }
 });
-
 module.exports = router;

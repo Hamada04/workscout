@@ -492,10 +492,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:workscout/data/datasource/data_test.dart';
-// استيراد الموديلات والبيانات المركزية
 import 'package:workscout/data/model/job_model.dart';
 import 'package:workscout/view/screen/home/job_details.dart';
+import 'package:workscout/controller/application_controller.dart';
 import 'package:workscout/controller/job_controller.dart';
 
 class TrackJobPage extends StatefulWidget {
@@ -513,6 +512,7 @@ class _TrackJobPageState extends State<TrackJobPage> with SingleTickerProviderSt
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     Get.find<JobController>().fetchSavedJobs();
+    Get.find<ApplicationController>().fetchMyApplications();
   }
 
   @override
@@ -554,29 +554,33 @@ class _TrackJobPageState extends State<TrackJobPage> with SingleTickerProviderSt
     );
   }
 
-  // --- التبويب الأول: يعتمد على قائمة التقديمات الحقيقية myApplications ---
+  // --- التبويب الأول: يعتمد على ApplicationController.myApplications ---
   Widget _buildAppliedJobsTab() {
-    if (myApplications.isEmpty) {
-      return _buildEmptyState("No applications submitted yet.");
-    }
+    final appCtrl = Get.find<ApplicationController>();
+    appCtrl.fetchMyApplications();
+    return Obx(() {
+      if (appCtrl.myApplications.isEmpty) {
+        return _buildEmptyState("No applications submitted yet.");
+      }
 
-    return Column(
-      children: [
-        const SizedBox(height: 15),
-        _buildFilterChips(), 
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            itemCount: myApplications.length, 
-            physics: const BouncingScrollPhysics(),
-            itemBuilder: (context, index) {
-              final application = myApplications[index]; 
-              return _buildAppliedJobCard(application);
-            },
+      return Column(
+        children: [
+          const SizedBox(height: 15),
+          _buildFilterChips(),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              itemCount: appCtrl.myApplications.length,
+              physics: const BouncingScrollPhysics(),
+              itemBuilder: (context, index) {
+                final application = appCtrl.myApplications[index];
+                return _buildAppliedJobCard(application);
+              },
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    });
   }
 
   // --- التبويب الثاني: يقـرأ من JobController.savedJobs التفاعلية ---

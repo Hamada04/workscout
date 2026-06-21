@@ -72,16 +72,23 @@ class ApiClient {
   static Future<dynamic> postMultipart(
     String endpoint, {
     required Map<String, String> fields,
-    required String fileField,
-    required String filePath,
+    String? fileField,
+    String? filePath,
     String? fileName,
+    List<int>? bytes,
   }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}$endpoint');
     final headers = await _getHeaders(isMultipart: true);
     final request = http.MultipartRequest('POST', uri);
     request.headers.addAll(headers);
     request.fields.addAll(fields);
-    request.files.add(await http.MultipartFile.fromPath(fileField, filePath, filename: fileName));
+    if (fileField != null) {
+      if (bytes != null) {
+        request.files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: fileName, contentType: http.MediaType('application', 'pdf')));
+      } else if (filePath != null) {
+        request.files.add(await http.MultipartFile.fromPath(fileField, filePath, filename: fileName));
+      }
+    }
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
     return _handleResponse(response);

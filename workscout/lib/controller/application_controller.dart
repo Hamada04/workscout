@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:workscout/data/model/job_model.dart';
+import 'package:workscout/services/api_client.dart';
 import 'package:workscout/services/application_service.dart';
 
 class ApplicationController extends GetxController {
@@ -7,12 +9,37 @@ class ApplicationController extends GetxController {
 
   final RxBool isSubmitting = RxBool(false);
   final RxString errorMessage = RxString('');
+  final RxList<JobApplication> myApplications = <JobApplication>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    fetchMyApplications();
+  }
+
+  Future<void> fetchMyApplications() async {
+    try {
+      final response = await ApiClient.get('/applications/my-applications');
+      final List<dynamic> data = response is List ? response : (response['applications'] ?? []);
+      myApplications.assignAll(data.map((e) => JobApplication.fromJson(e as Map<String, dynamic>)));
+    } catch (e) {
+      debugPrint('[ApplicationController] fetchMyApplications error: $e');
+      Get.snackbar(
+        'Sync Error',
+        'Could not load applications.\n$e',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 6),
+      );
+    }
+  }
 
   Future<void> apply({
     required String jobId,
-    required String filePath,
-    required String fileName,
+    String? filePath,
+    String? fileName,
+    List<int>? bytes,
     required String coverLetter,
+    String cvUrl = '',
   }) async {
     isSubmitting.value = true;
     errorMessage.value = '';
@@ -21,8 +48,12 @@ class ApplicationController extends GetxController {
         jobId: jobId,
         filePath: filePath,
         fileName: fileName,
+        bytes: bytes,
         coverLetter: coverLetter,
+        cvUrl: cvUrl,
       );
+
+      await fetchMyApplications();
 
       Get.dialog(
         AlertDialog(

@@ -131,6 +131,7 @@ class UserProfile {
   List<String> savedJobsIds;
   List<Education> education;
   String email;
+  String cvUrl;
 
   UserProfile({
     required this.name,
@@ -143,6 +144,7 @@ class UserProfile {
     required this.savedJobsIds,
     required this.education,
     this.email = '',
+    this.cvUrl = '',
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -168,6 +170,7 @@ class UserProfile {
               .toList()
           : [],
       email: json['email'] ?? '',
+      cvUrl: json['cvUrl'] ?? '',
     );
   }
 
@@ -183,6 +186,7 @@ class UserProfile {
       'savedJobsIds': savedJobsIds,
       'education': education.map((e) => e.toJson()).toList(),
       'email': email,
+      'cvUrl': cvUrl,
     };
   }
 }
@@ -201,10 +205,17 @@ class JobApplication {
   });
 
   factory JobApplication.fromJson(Map<String, dynamic> json) {
+    final jobData = json['job'] ?? json['jobId'];
+    Job job;
+    if (jobData is Map<String, dynamic>) {
+      job = Job.fromJson(jobData);
+    } else {
+      job = Job.fromJson({'_id': json['jobId']?.toString() ?? ''});
+    }
     return JobApplication(
-      job: Job.fromJson(json['job'] as Map<String, dynamic>),
+      job: job,
       status: json['status'] ?? 'pending',
-      appliedDate: json['appliedDate'] ?? '',
+      appliedDate: json['appliedDate'] ?? json['appliedAt'] ?? '',
       adminMessage: json['adminMessage'],
     );
   }
