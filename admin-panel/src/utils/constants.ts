@@ -57,6 +57,7 @@ export const APPLICATION_STATUSES = [
   'pending',
   'reviewed',
   'interview',
+  'offered',
   'accepted',
   'rejected',
 ] as const;

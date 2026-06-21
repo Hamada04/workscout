@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:workscout/controller/application_controller.dart';
 import 'package:workscout/controller/auth_controller.dart';
 import 'package:workscout/controller/job_controller.dart';
+import 'package:workscout/controller/notification_controller.dart';
 import 'package:workscout/routes.dart';
 
 void main() {
@@ -17,6 +18,7 @@ class MyApp extends StatelessWidget {
     Get.put(AuthController());
     Get.put(JobController());
     Get.lazyPut(() => ApplicationController());
+    Get.lazyPut(() => NotificationController());
 
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,

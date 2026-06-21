@@ -5,7 +5,7 @@ const applicationSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: {
         type: String,
-        enum: ['pending', 'reviewed', 'interview', 'accepted', 'rejected'],
+        enum: ['pending', 'reviewed', 'interview', 'offered', 'accepted', 'rejected'],
         default: 'pending',
         index: true
     },

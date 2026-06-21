@@ -60,8 +60,22 @@ export default function ApplicationDetailPage() {
     if (!token || !id || !application) return;
     try {
       await applicationService.updateStatus(token, id, newStatus);
-      setApplication({ ...application, status: newStatus });
+      const fresh = await applicationService.getById(token, id);
+      const app = (fresh as unknown as Record<string, unknown>)?.['data'] as Application ?? (fresh as unknown as Application);
+      setApplication(app);
       setShowStatusModal(false);
+    } catch {
+      // Handled by interceptor
+    }
+  };
+
+  const quickUpdate = async (status: ApplicationStatus) => {
+    if (!token || !id || !application) return;
+    try {
+      await applicationService.updateStatus(token, id, status);
+      const fresh = await applicationService.getById(token, id);
+      const app = (fresh as unknown as Record<string, unknown>)?.['data'] as Application ?? (fresh as unknown as Application);
+      setApplication(app);
     } catch {
       // Handled by interceptor
     }
@@ -130,6 +144,38 @@ export default function ApplicationDetailPage() {
           >
             Update Status
           </Button>
+          {application.status === 'pending' && (
+            <Button
+              variant="outline"
+              onClick={() => quickUpdate('reviewed')}
+            >
+              Mark Reviewed
+            </Button>
+          )}
+          {(application.status === 'pending' || application.status === 'reviewed') && (
+            <Button
+              variant="outline"
+              onClick={() => quickUpdate('interview')}
+            >
+              Shortlist Interview
+            </Button>
+          )}
+          {application.status !== 'accepted' && application.status !== 'rejected' && (
+            <>
+              <Button
+                variant="primary"
+                onClick={() => quickUpdate('accepted')}
+              >
+                Accept
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => quickUpdate('rejected')}
+              >
+                Reject
+              </Button>
+            </>
+          )}
           <Button 
             variant="outline" 
             onClick={() => setShowMessageModal(true)}

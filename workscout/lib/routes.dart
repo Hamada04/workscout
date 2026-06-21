@@ -15,6 +15,7 @@
 import 'package:flutter/material.dart';
 // استيراد الصفحات الجديدة
 import 'package:workscout/view/screen/authintecation/signup_view.dart';
+import 'package:workscout/view/screen/home/gemini_recommendation_page.dart';
 import 'package:workscout/view/screen/home/main_screen.dart'; // تأكد من المسار الصحيح لصفحتك الرئيسية
 import 'package:workscout/view/screen/authintecation/login_sucsess_view.dart';
 import 'package:workscout/view/screen/authintecation/login_view.dart';
@@ -38,4 +39,5 @@ Map<String, Widget Function(BuildContext)> routes = {
   "/PersonalInformation": (context) => const PersonalInformation(),
   "/ProfesionalProfile": (context) => const ProfesionalProfile(),
   "/PersonalCv": (context) => const PersonalCv(),
+  "/GeminiRecommendationPage": (context) => const GeminiRecommendationPage(),
 };

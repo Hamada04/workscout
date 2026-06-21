@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Briefcase, 
@@ -18,6 +18,7 @@ import { applicationService } from '@/services/applicationService';
 import { Application, Job } from '@/types';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user, token } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -191,6 +192,7 @@ export default function DashboardPage() {
             isLoading={isLoading}
             emptyMessage="No recent applications"
             className="border-0"
+            onRowClick={(app) => navigate(`/applications/${app._id}`)}
           />
         </Card>
 

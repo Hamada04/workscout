@@ -72,7 +72,7 @@ export interface Application {
   updatedAt?: string;
 }
 
-export type ApplicationStatus = 'pending' | 'reviewed' | 'interview' | 'accepted' | 'rejected';
+export type ApplicationStatus = 'pending' | 'reviewed' | 'interview' | 'offered' | 'accepted' | 'rejected';
 
 // Notification Types
 export interface Notification {

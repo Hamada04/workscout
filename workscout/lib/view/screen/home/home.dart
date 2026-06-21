@@ -1750,6 +1750,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:workscout/controller/auth_controller.dart';
 import 'package:workscout/controller/job_controller.dart';
@@ -1820,7 +1821,24 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 15),
                 _buildSpecializationGrid(),
                 const SizedBox(height: 25),
-                _buildSectionHeader("Recommendation"),
+                 
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Text("Recommendation", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => Get.toNamed("/GeminiRecommendationPage"),
+                        child: SvgPicture.asset(
+                          'assets/images/google-gemini.svg',
+                          width: 28,
+                          height: 28,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 15),
                 
                 // القائمة الرأسية الشاملة

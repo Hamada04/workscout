@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const Application = require('../models/Application');
 const OfferLetter = require('../models/OfferLetter');
 const Notification = require('../models/Notification');
 const adminAuth = require('../middleware/adminAuth');
@@ -51,6 +52,8 @@ router.post('/create', adminAuth, async (req, res, next) => {
         });
         
         await offer.save();
+
+        await Application.findByIdAndUpdate(applicationId, { status: 'offered' });
 
         const notification = new Notification({
             userId,
@@ -104,6 +107,8 @@ router.put('/:id/resend', adminAuth, async (req, res, next) => {
         offer.expiresAt = expiresAt;
         offer.status = 'sent';
         await offer.save();
+
+        await Application.findByIdAndUpdate(offer.applicationId, { status: 'offered' });
 
         const notification = new Notification({
             userId: offer.userId,

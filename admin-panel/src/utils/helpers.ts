@@ -79,6 +79,7 @@ export function getStatusColor(status: ApplicationStatus): {
     'pending': { bg: 'bg-blue-100', text: 'text-blue-700', dot: 'bg-blue-500' },
     'reviewed': { bg: 'bg-yellow-100', text: 'text-yellow-700', dot: 'bg-yellow-500' },
     'interview': { bg: 'bg-purple-100', text: 'text-purple-700', dot: 'bg-purple-500' },
+    'offered': { bg: 'bg-teal-100', text: 'text-teal-700', dot: 'bg-teal-500' },
     'accepted': { bg: 'bg-green-100', text: 'text-green-700', dot: 'bg-green-500' },
     'rejected': { bg: 'bg-red-100', text: 'text-red-700', dot: 'bg-red-500' },
   };
