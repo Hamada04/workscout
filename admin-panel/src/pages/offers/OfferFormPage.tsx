@@ -56,11 +56,11 @@ export default function OfferFormPage() {
   }, [token, location.state]);
 
   const applicationOptions = applications.map(a => {
-    const user = a.userId as User;
-    const job = a.jobId as Job;
+    const user = a.userId as User | undefined;
+    const job = a.jobId as Job | undefined;
     return {
       value: a._id,
-      label: `${user.name} - ${job.jobTitle} at ${job.companyName}`,
+      label: `${user?.name ?? 'Unknown'} - ${job?.jobTitle ?? 'Unknown'} at ${job?.companyName ?? 'Unknown'}`,
     };
   });
 

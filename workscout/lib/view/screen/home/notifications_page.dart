@@ -4,8 +4,22 @@ import 'package:workscout/controller/notification_controller.dart';
 import 'package:workscout/data/model/notification_model.dart';
 import 'package:workscout/view/screen/home/offer_letter_page.dart';
 
-class NotificationsPage extends StatelessWidget {
+class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
+
+  @override
+  State<NotificationsPage> createState() => _NotificationsPageState();
+}
+
+class _NotificationsPageState extends State<NotificationsPage> {
+  late final NotificationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.find<NotificationController>();
+    controller.fetchNotifications();
+  }
 
   String _timeAgo(String createdAt) {
     try {
@@ -23,7 +37,6 @@ class NotificationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<NotificationController>();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -36,15 +49,18 @@ class NotificationsPage extends StatelessWidget {
         title: const Text("Notifications", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
-      body: Obx(() {
-        if (controller.isLoading.value && controller.notifications.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (controller.notifications.isEmpty) {
-          return _buildEmptyState();
-        }
-        return _buildNotificationsList(controller);
-      }),
+      body: RefreshIndicator(
+        onRefresh: () => controller.fetchNotifications(),
+        child: Obx(() {
+          if (controller.isLoading.value && controller.notifications.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (controller.notifications.isEmpty) {
+            return _buildEmptyState();
+          }
+          return _buildNotificationsList(controller);
+        }),
+      ),
     );
   }
 
@@ -97,7 +113,7 @@ class NotificationsPage extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 5)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 5)),
           ],
           border: Border.all(color: Colors.grey.shade100),
         ),

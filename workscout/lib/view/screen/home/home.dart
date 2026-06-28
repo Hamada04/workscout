@@ -1873,8 +1873,8 @@ class _HomePageState extends State<HomePage> {
           Text(Get.find<AuthController>().currentUser.value?.name ?? '', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
           Row(
             children: const [
-              Text("UI/UX Designer", style: TextStyle(color: Colors.grey, fontSize: 12)),
-              Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 16),
+              // Text("UI/UX Designer", style: TextStyle(color: Colors.grey, fontSize: 12)),
+              // Icon(Icons.keyboard_arrow_down, color: Colors.grey, size: 16),
             ],
           ),
         ],

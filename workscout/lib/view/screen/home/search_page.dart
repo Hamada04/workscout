@@ -502,7 +502,7 @@ class _SearchPageState extends State<SearchPage> {
           const SizedBox(height: 15),
           _categoryItem("Digital Marketing"),
           _categoryItem("Business Development"),
-          _categoryItem("Finance"),
+          // _categoryItem("Finance"),
           _categoryItem("Technology"),
           _categoryItem("Human Resources"),
         ],

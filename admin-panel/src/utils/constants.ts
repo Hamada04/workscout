@@ -24,13 +24,13 @@ export const JOB_CATEGORIES = [
   'Design',
   'Technology',
   'Marketing',
-  'Finance',
+  // 'Finance',
   'Business',
-  'Human Resources',
-  'Engineering',
-  'Sales',
-  'Customer Service',
-  'Operations',
+  // 'Human Resources',
+  // 'Engineering',
+  // 'Sales',
+  // 'Customer Service',
+  // 'Operations',
 ];
 
 // Job Types

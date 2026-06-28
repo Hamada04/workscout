@@ -20,10 +20,10 @@ const categoryOptions = [
   { value: 'Technology', label: 'Technology' },
   { value: 'Design', label: 'Design' },
   { value: 'Marketing', label: 'Marketing' },
-  { value: 'Sales', label: 'Sales' },
-  { value: 'Healthcare', label: 'Healthcare' },
-  { value: 'Education', label: 'Education' },
-  { value: 'Finance', label: 'Finance' },
+  // { value: 'Sales', label: 'Sales' },
+  // { value: 'Healthcare', label: 'Healthcare' },
+  // { value: 'Education', label: 'Education' },
+  // { value: 'Finance', label: 'Finance' },
 ];
 
 const jobTypeOptions = [

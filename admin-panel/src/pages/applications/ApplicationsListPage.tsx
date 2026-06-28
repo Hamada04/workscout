@@ -71,13 +71,13 @@ export default function ApplicationsListPage() {
       label: 'Applicant',
       sortable: true,
       render: (app: Application) => {
-        const user = app.userId as User;
+        const user = app.userId as User | undefined;
         return (
           <div className="flex items-center gap-3">
-            <Avatar name={user.name} size="md" />
+            <Avatar name={user?.name ?? '?'} size="md" />
             <div>
-              <p className="font-medium text-gray-900">{user.name}</p>
-              <p className="text-sm text-gray-500">{user.email}</p>
+              <p className="font-medium text-gray-900">{user?.name ?? 'Unknown'}</p>
+              <p className="text-sm text-gray-500">{user?.email ?? ''}</p>
             </div>
           </div>
         );
@@ -87,11 +87,11 @@ export default function ApplicationsListPage() {
       key: 'job',
       label: 'Job',
       render: (app: Application) => {
-        const job = app.jobId as Job;
+        const job = app.jobId as Job | undefined;
         return (
           <div>
-            <p className="font-medium text-gray-900">{job.jobTitle}</p>
-            <p className="text-sm text-gray-500">{job.companyName}</p>
+            <p className="font-medium text-gray-900">{job?.jobTitle ?? 'Unknown Position'}</p>
+            <p className="text-sm text-gray-500">{job?.companyName ?? ''}</p>
           </div>
         );
       },
